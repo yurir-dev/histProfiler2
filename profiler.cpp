@@ -45,7 +45,11 @@ public:
 		else
 		{
 			++m_overfows;
-			m_buckets[m_buckets.size() - 1] = (uint64_t)std::round((double)s / (double)m_buckets.size());
+
+			// it this overflow to the last special bucket, it will preserve it's weight on the average.
+			// is twice greater than buckets then will increment by 2
+			m_buckets[m_buckets.size() - 1] += (uint64_t)std::round((double)bucket / (double)m_buckets.size());
+			//std::cout << "s: " << s << " val: " << (uint64_t)std::round((double)bucket / (double)m_buckets.size()) << std::endl;
 		}
 	}
 
