@@ -36,6 +36,7 @@ public:
 		++m_numSamples;
 
 		const size_t bucket = s / m_declaration.samplesPerBucket;
+		//std::cout << "s: " << s << " bucket: " << bucket << std::endl;
 		if (bucket < numBuckets.size())
 			++numBuckets[bucket];
 		else
@@ -47,7 +48,8 @@ public:
 	std::string toString() const;
 	//std::string toJson();
 
-	double average()const { return m_numSamples > 0 ? (double)m_sum / (double)m_numSamples : 0.0; }
+	double mean()const { return m_numSamples > 0 ? (double)m_sum / (double)m_numSamples : 0.0; }
+	double std()const { return 0.0; }
 	uint64_t median()const { return 0; }
 
 private:
@@ -101,10 +103,12 @@ void start(const std::string& label)
 }
 void end(const std::string& label)
 {
+	const auto now = std::chrono::system_clock::now();
+
 	const auto iter = ctx.histograms.find(label);
 	if (iter != ctx.histograms.end())
 	{
-		const auto diffNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - iter->second.getCurrentTS());
+		const auto diffNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - iter->second.getCurrentTS());
 		iter->second.input(diffNanos.count());
 	}
 }
@@ -115,17 +119,16 @@ std::string histogram::toString() const
 {
 	std::ostringstream stringStream;
 
+	stringStream << m_declaration.label << std::endl
+		<< "   #buckets: " << numBuckets.size()
+		<< ", #samples: " << m_numSamples
+		<< ", #overflows: " << m_overfows 
+		<< ", ns per bucket: " << m_declaration.samplesPerBucket << std::endl
+		<< ", mean: " << mean() << ", std: " << std() << ", median: " << median()
+		<< ", min: " << m_minSample << ", max: " << m_maxSample << std::endl;
+
 	for (size_t i = 0; i < numBuckets.size(); ++i)
 		stringStream << numBuckets[i] << std::endl;
-
-	stringStream << m_declaration.label << std::endl
-		<< "num_buckets: " << numBuckets.size()
-		<< " min_sample: " << m_minSample
-		<< " max_sample: " << m_maxSample
-		<< " overflows: " << m_overfows << std::endl
-		<< "ns per bucket: " << m_declaration.samplesPerBucket
-		<< " average: " << average()
-		<< " median: " << median() << std::endl;
 
 	return stringStream.str();
 }
