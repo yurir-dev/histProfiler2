@@ -14,31 +14,44 @@ void testNanos();
 
 int main(int argc, char* argv[])
 {
+	/*
+	TODO the command line options.
+	-t seconds, millis, macros, nanos
+	-b sleep, spin, sqrt
+	-n num of loops
+	-o filename
+	*/
+
 	std::cout << "hello world" << std::endl;
 
 	//testSeconds();
 	//testMillis();
-	//testMicros();
-	testNanos();
+	testMicros();
+	//testNanos();
 
 	return 0;
 }
 
 template< class Rep, class Period >
-void getBusy(const std::chrono::duration<Rep, Period>& sleep_duration)
+void getBusySleep(const std::chrono::duration<Rep, Period>& sleep_duration)
 {
-	//std::this_thread::sleep_for(std::chrono::nanoseconds(t));
+	std::this_thread::sleep_for(sleep_duration);
+}
+template< class Rep, class Period >
+void getBusySpin(const std::chrono::duration<Rep, Period>& sleep_duration)
+{
 	const auto endTime = std::chrono::system_clock::now() + sleep_duration;
 	while (auto now = std::chrono::system_clock::now() < endTime)
 	{}
 }
+
 void getBusy(size_t cnt)
 {
 	for (size_t i = 0; i < cnt; ++i)
 	{
 		volatile double s = std::sqrt(i);
 		s = s * s;
-		s = std::sqrt(i);
+		//s = std::sqrt(i);
 	}
 }
 
@@ -84,7 +97,7 @@ void testMillis()
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		profiler::start("testMilliseconds");
-		getBusy(std::chrono::milliseconds(timeToSleep));
+		getBusySpin(std::chrono::milliseconds(timeToSleep));
 		profiler::end("testMilliseconds");
 	}
 
@@ -93,7 +106,8 @@ void testMillis()
 void testMicros()
 {
 	profiler::init({
-		{"testMicroseconds", 1'000, 20},
+		{"testMicrosecondsSpin1", 1'000, 20},
+		{"testMicrosecondsSpin2", 1'000, 20},
 		});
 
 	std::random_device rd{};
@@ -105,14 +119,24 @@ void testMicros()
 	for (size_t i = 0; i < 1000; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
-		std::cout << "timeToSleep " << timeToSleep << std::endl;
+		timeToSleep++;
+		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testMicroseconds");
-		getBusy(std::chrono::microseconds(timeToSleep));
-		profiler::end("testMicroseconds");
+		profiler::start("testMicrosecondsSpin1");
+		getBusySpin(std::chrono::microseconds(timeToSleep));
+		profiler::end("testMicrosecondsSpin1");
+	}
+	for (size_t i = 0; i < 1000; i++)
+	{
+		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
+		//std::cout << "timeToSleep " << timeToSleep << std::endl;
+
+		profiler::start("testMicrosecondsSpin2");
+		getBusySpin(std::chrono::microseconds(timeToSleep));
+		profiler::end("testMicrosecondsSpin2");
 	}
 
-	profiler::endProfiler();
+	profiler::endProfiler("test_res.txt");
 }
 void testNanos()
 {
@@ -124,17 +148,18 @@ void testNanos()
 	std::mt19937 gen{ rd() };
 	// values near the mean are the most likely
 	// standard deviation affects the dispersion of generated values from the mean
-	std::normal_distribution<> dist{ 50, 15 };
+	std::normal_distribution<> dist{ 50, 30 };
 
-	for (size_t i = 0; i < 100; i++)
+	for (size_t i = 0; i < 1000; i++)
 	{
-		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
-		//std::cout << "timeToSleep " << timeToSleep << std::endl;
+		auto s = std::round(dist(gen));
+		size_t timeToSleep = s > 0 ? static_cast<size_t>(s) : 0;
+		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		profiler::start("testNanoseconds");
 		getBusy(timeToSleep);
 		profiler::end("testNanoseconds");
 	}
 
-	profiler::endProfiler();
+	profiler::endProfiler("test_res.txt");
 }

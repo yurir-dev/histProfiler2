@@ -15,6 +15,7 @@ namespace profiler
 
 	void startProfiler();
 	void endProfiler();
+	void endProfiler(const std::string& fileName);
 
 	void start(const std::string& label);
 	void end(const std::string& label);
