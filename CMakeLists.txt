@@ -6,7 +6,7 @@ set (EXE_NAME "profiledApp")
 # set the project name
 project(${PROJECT_NAME})
 
-set (SOURCES main.cpp )
+set (SOURCES main.cpp profiler.h profiler.cpp)
 
 # add the executable
 add_executable(${EXE_NAME} ${SOURCES})
