@@ -22,8 +22,8 @@ void testMicros();
 void testNanos();
 
 
-std::string testType{};
-std::set<std::string> testTypes{"seconds", "millis", "macros", "nanos"};
+std::string testType{"micros"};
+std::set<std::string> testTypes{"seconds", "millis", "micros", "nanos"};
 std::ostream& operator<<(std::ostream& os, const std::set<std::string>& dt)
 {
 	for (auto iter = dt.begin(); iter != dt.end(); ++iter)
@@ -151,10 +151,28 @@ int main(int argc, char* argv[])
 	if (cpuNum > 0)
 		pinCpu();
 
-	//testSeconds();
-	//testMillis();
-	testMicros();
-	//testNanos();
+	if (testType == "seconds")
+	{
+		testSeconds();
+	}
+	else if (testType == "millis")
+	{
+		testMillis();
+	}
+	else if (testType == "micros")
+	{
+		testMicros();
+	}
+	else if (testType == "nanos")
+	{
+		testNanos();
+	}
+	else
+	{
+		usage("Unexpected test: " + testType);
+	}
+
+	std::cout << "finished: " << testType << " test, check the " << (!outputFileName.empty() ? outputFileName : "std:cout") << std::endl;
 
 	return 0;
 }
@@ -176,7 +194,7 @@ void getBusySqrt(size_t cnt)
 {
 	for (size_t i = 0; i < cnt; ++i)
 	{
-		volatile double s = std::sqrt(i);
+		volatile double s = std::sqrt(i + 1024 * 1024);
 		s = s * s;
 		//s = std::sqrt(i);
 	}
@@ -185,13 +203,11 @@ void getBusySqrt(size_t cnt)
 void testSeconds()
 {
 	profiler::init({
-		{"testSeconds", 1'000'000'000, 10},
+		{"normal distribution", 1'000'000'000, 10},
 		});
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
-	// values near the mean are the most likely
-	// standard deviation affects the dispersion of generated values from the mean
 	std::normal_distribution<> dist{ 5, 1 };
 
 	for (size_t i = 0; i < 10; i++)
@@ -199,48 +215,64 @@ void testSeconds()
 		int timeToSleep = static_cast<int>(std::round(dist(gen)));
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testSeconds");
+		profiler::begin("normal distribution");
 		std::this_thread::sleep_for(std::chrono::seconds(timeToSleep));
-		profiler::end("testSeconds");
+		profiler::end("normal distribution");
 	}
 
-	profiler::endProfiler();
+	if (!outputFileName.empty())
+		profiler::getData(outputFileName);
+	else
+		profiler::getData();
 }
 void testMillis()
 {
 	profiler::init({
-		{"testMilliseconds", 1'000'000, 20},
+		{"normal distribution", 1'000'000, 20},
+		{"gamma distribution", 1'000'000, 20},
 		});
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
-	// values near the mean are the most likely
-	// standard deviation affects the dispersion of generated values from the mean
-	std::normal_distribution<> dist{ 5, 1 };
+	std::normal_distribution<> dist{ 10, 3 };
 
 	for (size_t i = 0; i < 1000; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
-		std::cout << "timeToSleep " << timeToSleep << std::endl;
+		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testMilliseconds");
+		profiler::begin("normal distribution");
 		getBusySpin(std::chrono::milliseconds(timeToSleep));
-		profiler::end("testMilliseconds");
+		profiler::end("normal distribution");
 	}
 
-	profiler::endProfiler();
+	// A gamma distribution with alpha=1, and beta=2
+	// approximates an exponential distribution.
+	std::gamma_distribution<> distGamma(1, 2);
+	for (size_t i = 0; i < 1000; i++)
+	{
+		size_t timeToSleep = static_cast<size_t>(std::round(distGamma(gen)));
+		//std::cout << "timeToSleep " << timeToSleep << std::endl;
+
+		profiler::begin("gamma distribution");
+		getBusySpin(std::chrono::milliseconds(timeToSleep));
+		profiler::end("gamma distribution");
+	}
+
+	if (!outputFileName.empty())
+		profiler::getData(outputFileName);
+	else
+		profiler::getData();
 }
 void testMicros()
 {
 	profiler::init({
-		{"testMicrosecondsSpin1", 1'000, 100},
-		{"testMicrosecondsSpin2", 1'000, 100},
+		{"normal distribution 1", 1'000, 100},
+		{"normal distribution 2", 1'000, 100},
 		});
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
-	// values near the mean are the most likely
-	// standard deviation affects the dispersion of generated values from the mean
 	std::normal_distribution<> dist{ 10, 2 };
 
 	for (size_t i = 0; i < N; i++)
@@ -249,46 +281,51 @@ void testMicros()
 		timeToSleep += 10;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testMicrosecondsSpin1");
+		profiler::begin("normal distribution 1");
 		getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		profiler::end("testMicrosecondsSpin1");
+		profiler::end("normal distribution 1");
 	}
 	for (size_t i = 0; i < N; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testMicrosecondsSpin2");
+		profiler::begin("normal distribution 2");
 		getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		profiler::end("testMicrosecondsSpin2");
+		profiler::end("normal distribution 2");
 	}
 
-	profiler::endProfiler(outputFileName);
+	if (!outputFileName.empty())
+		profiler::getData(outputFileName);
+	else
+		profiler::getData();
 }
 void testNanos()
 {
 	profiler::init({
-		{"testNanoseconds", 10, 100},
+		{"normal distribution", 10, 500},
 		});
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
-	// values near the mean are the most likely
-	// standard deviation affects the dispersion of generated values from the mean
-	std::normal_distribution<> dist{ 50, 30 };
+	std::normal_distribution<> dist{ 10, 2 };
 
 	for (size_t i = 0; i < N; i++)
 	{
 		auto s = std::round(dist(gen));
 		size_t timeToSleep = s > 0 ? static_cast<size_t>(s) : 0;
-		std::cout << "timeToSleep " << timeToSleep << std::endl;
+		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::start("testNanoseconds");
-		getBusySpin(std::chrono::nanoseconds(timeToSleep));
-		profiler::end("testNanoseconds");
+		profiler::begin("normal distribution");
+		//getBusySpin(std::chrono::nanoseconds(timeToSleep));
+		getBusySqrt(timeToSleep);
+		profiler::end("normal distribution");
 	}
 
-	profiler::endProfiler("test_res.txt");
+	if (!outputFileName.empty())
+		profiler::getData(outputFileName);
+	else
+		profiler::getData();
 }

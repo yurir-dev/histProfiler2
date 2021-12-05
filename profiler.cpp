@@ -38,7 +38,7 @@ public:
 		m_sum += s;
 		++m_numSamples;
 
-		const size_t bucket = s / m_declaration.samplesPerBucket;
+		const size_t bucket = (size_t)std::round((double)s / (double)m_declaration.samplesPerBucket);
 		//std::cout << "s: " << s << " bucket: " << bucket << std::endl;
 		if (bucket < m_buckets.size())
 			++m_buckets[bucket];
@@ -47,18 +47,43 @@ public:
 			++m_overfows;
 
 			// it this overflow to the last special bucket, it will preserve it's weight on the average.
-			// is twice greater than buckets then will increment by 2
+			// if twice greater than buckets then will increment by 2
 			m_buckets[m_buckets.size() - 1] += (uint64_t)std::round((double)bucket / (double)m_buckets.size());
 			//std::cout << "s: " << s << " val: " << (uint64_t)std::round((double)bucket / (double)m_buckets.size()) << std::endl;
 		}
 	}
 
 	std::string toString(bool header = true, bool data = true) const;
-	//std::string toJson();
 
 	double mean()const { return m_numSamples > 0 ? (double)m_sum / (double)m_numSamples : 0.0; }
-	double std()const { return 0.0; }
-	uint64_t median()const { return 0; }
+	double std()const
+	{
+		if (m_numSamples <= 0 || m_declaration.samplesPerBucket == 0)
+			return 0.0;
+
+		double m = mean() / m_declaration.samplesPerBucket;
+		double sum{0};
+		for (size_t i = 0; i < m_buckets.size(); ++i)
+		{
+			double d = ((double)i - m);
+			d *= d;
+			sum += d * m_buckets[i];
+		}
+
+		return std::sqrt(sum / m_numSamples);
+	}
+	uint64_t median()const
+	{
+		uint64_t halfSamples{m_numSamples / 2};
+		uint64_t sum{0};
+		for (size_t i = 0; i < m_buckets.size(); ++i)
+		{
+			sum += m_buckets[i];
+			if (sum >= halfSamples)
+				return i;
+		}
+		return 0;
+	}
 
 private:
 	std::vector<uint64_t> m_buckets;
@@ -93,20 +118,16 @@ void init(const std::vector<declaration>& declarations)
 		ctx.histograms[d.label] = histogram(d);
 }
 
-void startProfiler()
+void getData()
 {
-	// TODO, start taking samples only after this function
-	// allow to warmup
-}
-void endProfiler()
-{
-	// dump everything to a file
+	// dump everything to cout
 	for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
 		std::cout << iter->second.toString() << std::endl;
 }
 
-void endProfiler(const std::string& fileName)
+void getData(const std::string& fileName)
 {
+	// dump everything to a txt file, 
 	std::ofstream outputFile(fileName);
 	if (outputFile)
 	{
@@ -118,13 +139,13 @@ void endProfiler(const std::string& fileName)
 	else
 	{
 		std::cerr << "Failure opening " << fileName << " dumping to stdout" << std::endl;
-		endProfiler();
+		getData();
 	}
 
 	;
 }
 
-void start(const std::string& label)
+void begin(const std::string& label)
 {
 	auto iter = ctx.histograms.find(label);
 	if (iter != ctx.histograms.end())
@@ -150,18 +171,23 @@ std::string histogram::toString(bool header, bool data) const
 
 	if (header)
 	{
+		const auto average = mean();
+		const auto deviation = std();
+
 		stringStream << m_declaration.label
-			<< "   #buckets: " << m_buckets.size()
+			<< " #buckets: " << m_buckets.size()
 			<< ", #samples: " << m_numSamples
 			<< ", #overflows: " << m_overfows
-			<< ", ns per bucket: " << m_declaration.samplesPerBucket
-			<< ", mean: " << mean() << ", std: " << std() << ", median: " << median()
-			<< ", min: " << m_minSample << ", max: " << m_maxSample;
+			<< ", ns/bucket: " << m_declaration.samplesPerBucket
+			<< ", mean: " << average / m_declaration.samplesPerBucket << ",(" << average << " ns)"
+			<< ", std: " << deviation << ", median: " << median()
+			<< ", min: " << m_minSample << "ns, max: " << m_maxSample << "ns";
 	}
 
 	if (data)
 	{
 		stringStream << std::endl;
+		std::cout << 0 << std::endl;
 		for (size_t i = 0; i < m_buckets.size(); ++i)
 			stringStream << m_buckets[i] << std::endl;
 	}
@@ -178,6 +204,10 @@ std::string context::toXmlFile()const
 		stringStream << iter->second.toString(true, false) << '\t';
 	}
 	stringStream << std::endl;
+
+	//for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
+	//	stringStream << 0 << '\t';
+	//stringStream << std::endl;
 
 	bool finished{false};
 	for (size_t i = 0; !finished; ++i)
