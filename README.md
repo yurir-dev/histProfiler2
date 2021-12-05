@@ -1,6 +1,6 @@
 # histProfiler
 
-Very lightweight profiler based on inserting timestamps sampling in to the tested code.
+Very lightweight performance profiler based on inserting timestamps sampling in to the tested code.
 {
   Begin(“part1 of my code”)
   …
