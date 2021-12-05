@@ -138,6 +138,8 @@ void pinCpu()
 #endif
 }
 
+#error "compilation error to test github action build"
+
 int main(int argc, char* argv[])
 {
 	parseArgv(argc, argv);
