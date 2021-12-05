@@ -12,6 +12,8 @@
 #elif defined (LINUX)
 #define _GNU_SOURCE             /* See feature_test_macros(7) */
 #include <pthread.h>
+#else
+#warning "thread pinning is not supported for this OS"
 #endif
 
 #include "profiler.h"
@@ -129,12 +131,13 @@ void pinCpu()
 #elif defined (LINUX)
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
-	CPU_SET(i, &cpuset);
-	int rc = pthread_setaffinity_np(threads[i].native_handle(),
-		sizeof(cpu_set_t), &cpuset);
+	CPU_SET(cpuNum, &cpuset);
+	int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
 	if (rc != 0) {
-		std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+		std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
 	}
+#else
+	std::cerr << "thread pinning is not supported for this OS" << std::endl;
 #endif
 }
 

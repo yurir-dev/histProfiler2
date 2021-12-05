@@ -53,7 +53,8 @@ namespace profiler
 	/* 
 		dumps all the data to std::cout or a text file
 		std::cout : histogram after histogram.
-		text file : each histogram in a separate column, separated by a tab, copy&paste into excel, or just open the file from excel
+		text file : each histogram in a separate column, separated by a tab,
+					copy&paste into excel, or just open the file from excel
 	*/
 	void getData();
 	void getData(const std::string& fileName);
@@ -62,6 +63,15 @@ namespace profiler
 		take current timestamp in nanos (std::chrono::system_clock::now() is used)
 		end() calculates the difference and stores it in the assosiated histogram.
 		if label was not declared in init(), will do nothing.
+		
+		example:
+		profiler::init({
+			{"test my code in millis", 1'000'000, 20},
+		});
+
+		begin("test my code in millis");
+		...
+		end("test my code in millis");
 	*/
 	void begin(const std::string& label);
 	void end(const std::string& label);
