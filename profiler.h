@@ -3,10 +3,17 @@
 #include <vector>
 #include <string>
 
+#include <iostream>
+
 namespace profiler
 {
 	struct declaration
 	{
+		//~declaration()
+		//{
+		//	std::cout << "declaration dtor: " << label << std::endl;
+		//}
+
 		/* id string for current histogram, should be used in begin/end functions*/
 		std::string label;
 
@@ -25,6 +32,8 @@ namespace profiler
 		*/
 		size_t numBuckets{1};
 	};
+
+
 
 	/*
 		inits everything, can be called several times.
@@ -50,14 +59,16 @@ namespace profiler
 	*/
 	void init(const std::vector<declaration>& declarations);
 
+
+
 	/* 
 		dumps all the data to std::cout or a text file
-		std::cout : histogram after histogram.
-		text file : each histogram in a separate column, separated by a tab,
-					copy&paste into excel, or just open the file from excel
+		outFormat::follow : histogram after histogram.
+		outFormat::excel : each histogram in a separate column, separated by a tab,
+							copy&paste into excel, or just open the file from excel
 	*/
-	void getData();
-	void getData(const std::string& fileName);
+	enum class outFormat {follow, excel};
+	void getData(std::ostream& out, outFormat f);
 
 	/*
 		take current timestamp in nanos (std::chrono::system_clock::now() is used)
@@ -76,3 +87,45 @@ namespace profiler
 	void begin(const std::string& label);
 	void end(const std::string& label);
 };
+
+
+
+/*
+	Use these macros, if compiled without ENABLE_HIST_PROFILER flag,
+	it won't add any penalty
+
+	Example:
+
+	// init two histograms with microseconds resolution and 100 buckets
+	HistProfiler_Init({
+		{"normal distribution 1", 1'000, 100},
+		{"normal distribution 2", 1'000, 100},
+		});
+
+	// take samples
+	loop {
+		HistProfiler_Begin("normal distribution 1");
+		...
+		HistProfiler_End("normal distribution 1");
+	}
+
+	// dump the collected samples into a file or standard output
+	if (outputFile)
+		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
+	else
+		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
+
+*/
+
+#if defined (ENABLE_HIST_PROFILER)
+#define HistProfiler_Init(...) do { profiler::init(__VA_ARGS__); } while(false)
+#define HistProfiler_DumpData(stream, format) do { profiler::getData(stream, format); } while(false)
+#define HistProfiler_Begin(label) do { profiler::begin(label); } while(false)
+#define HistProfiler_End(label) do { profiler::end(label); } while(false)
+#else
+#define HistProfiler_Init(...) ((void)0)
+#define HistProfiler_DumpData(stream, format) ((void)0)
+#define HistProfiler_Begin(label) ((void)0)
+#define HistProfiler_End(label) ((void)0)
+#endif
+

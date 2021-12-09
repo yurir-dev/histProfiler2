@@ -7,10 +7,8 @@
 #include <fstream>
 #include <cmath>
 
-using namespace profiler;
-
-namespace profiler{
-
+namespace profiler
+{
 
 struct context;
 
@@ -19,7 +17,7 @@ struct histogram
 	friend context;
 public:
 	histogram() = default;
-	histogram(const declaration& d)
+	histogram(const profiler::declaration& d)
 	{
 		m_declaration = d;
 		m_buckets.resize(d.numBuckets + 1);
@@ -62,7 +60,7 @@ public:
 			return 0.0;
 
 		double m = mean() / m_declaration.samplesPerBucket;
-		double sum{0};
+		double sum{ 0 };
 		for (size_t i = 0; i < m_buckets.size(); ++i)
 		{
 			double d = ((double)i - m);
@@ -74,8 +72,8 @@ public:
 	}
 	uint64_t median()const
 	{
-		uint64_t halfSamples{m_numSamples / 2};
-		uint64_t sum{0};
+		uint64_t halfSamples{ m_numSamples / 2 };
+		uint64_t sum{ 0 };
 		for (size_t i = 0; i < m_buckets.size(); ++i)
 		{
 			sum += m_buckets[i];
@@ -87,83 +85,16 @@ public:
 
 private:
 	std::vector<uint64_t> m_buckets;
-	declaration m_declaration;
-	uint64_t m_maxSample{0};
+	profiler::declaration m_declaration;
+	uint64_t m_maxSample{ 0 };
 	uint64_t m_minSample{ 0xfffffffffffffffLL };
-	uint64_t m_overfows{0};
-	uint64_t m_sum{0};
-	uint64_t m_numSamples{0};
+	uint64_t m_overfows{ 0 };
+	uint64_t m_sum{ 0 };
+	uint64_t m_numSamples{ 0 };
 
 	std::chrono::time_point<std::chrono::system_clock> m_ts;
 
 };
-
-struct context
-{
-	std::unordered_map<std::string, histogram> histograms;
-
-	std::string toXmlFile()const;
-};
-
-
-
-
-context ctx;
-
-
-void init(const std::vector<declaration>& declarations)
-{
-	ctx.histograms.reserve(declarations.size());
-	for (auto& d : declarations)
-		ctx.histograms[d.label] = histogram(d);
-}
-
-void getData()
-{
-	// dump everything to cout
-	for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
-		std::cout << iter->second.toString() << std::endl;
-}
-
-void getData(const std::string& fileName)
-{
-	// dump everything to a txt file, 
-	std::ofstream outputFile(fileName);
-	if (outputFile)
-	{
-		outputFile << ctx.toXmlFile();
-
-		// write some data into buf
-		//outputFile.write(&buf[0], buf.size()); // write binary to the output stream
-	}
-	else
-	{
-		std::cerr << "Failure opening " << fileName << " dumping to stdout" << std::endl;
-		getData();
-	}
-
-	;
-}
-
-void begin(const std::string& label)
-{
-	auto iter = ctx.histograms.find(label);
-	if (iter != ctx.histograms.end())
-		iter->second.setCurrentTS(std::chrono::system_clock::now());
-}
-void end(const std::string& label)
-{
-	const auto now = std::chrono::system_clock::now();
-
-	const auto iter = ctx.histograms.find(label);
-	if (iter != ctx.histograms.end())
-	{
-		const auto diffNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - iter->second.getCurrentTS());
-		iter->second.input(diffNanos.count());
-	}
-}
-
-
 
 std::string histogram::toString(bool header, bool data) const
 {
@@ -195,38 +126,96 @@ std::string histogram::toString(bool header, bool data) const
 	return stringStream.str();
 }
 
-std::string context::toXmlFile()const
+
+
+
+
+
+struct context
 {
-	std::ostringstream stringStream;
+	std::unordered_map<std::string, histogram> histograms;
 
-	for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
+	void toXml(std::ostream& out)const
 	{
-		stringStream << iter->second.toString(true, false) << '\t';
-	}
-	stringStream << std::endl;
+		std::ostringstream stringStream;
 
-	//for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
-	//	stringStream << 0 << '\t';
-	//stringStream << std::endl;
-
-	bool finished{false};
-	for (size_t i = 0; !finished; ++i)
-	{
-		bool moreBuckets{ false };
-		for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
+		for (auto iter = histograms.cbegin(); iter != histograms.end(); ++iter)
 		{
-			if (i < iter->second.m_buckets.size())
-			{
-				moreBuckets = true;
-				stringStream << iter->second.m_buckets[i] << '\t';
-			}
+			out << iter->second.toString(true, false) << '\t';
 		}
-		stringStream << std::endl;
+		out << std::endl;
 
-		if (!moreBuckets)
-			finished = true;
+		//for (auto iter = ctx.histograms.cbegin(); iter != ctx.histograms.end(); ++iter)
+		//	out << 0 << '\t';
+		//out << std::endl;
+
+		bool finished{ false };
+		for (size_t i = 0; !finished; ++i)
+		{
+			bool moreBuckets{ false };
+			for (auto iter = histograms.cbegin(); iter != histograms.end(); ++iter)
+			{
+				if (i < iter->second.m_buckets.size())
+				{
+					moreBuckets = true;
+					out << iter->second.m_buckets[i] << '\t';
+				}
+			}
+			out << std::endl;
+
+			if (!moreBuckets)
+				finished = true;
+		}
 	}
-	return stringStream.str();
+	void toStd(std::ostream& out)const
+	{
+		for (auto iter = histograms.cbegin(); iter != histograms.end(); ++iter)
+			out << iter->second.toString() << std::endl;
+	}
+};
+context ctx;
+
+
+void init(const std::vector<declaration>& declarations)
+{
+	ctx.histograms.reserve(declarations.size());
+	for (auto& d : declarations)
+		ctx.histograms[d.label] = histogram(d);
 }
 
+void getData(std::ostream& out, outFormat f)
+{
+	switch (f)
+	{
+	case outFormat::excel:
+		ctx.toXml(out);
+		break;
+	case outFormat::follow:
+		ctx.toStd(out);
+		break;
+	default:
+		std::cerr << "invalid format: " << static_cast<int>(f) << " , dump as std" << std::endl;
+		ctx.toStd(out);
+		break;
+	}
 }
+
+void begin(const std::string& label)
+{
+	auto iter = ctx.histograms.find(label);
+	if (iter != ctx.histograms.end())
+		iter->second.setCurrentTS(std::chrono::system_clock::now());
+}
+void end(const std::string& label)
+{
+	const auto now = std::chrono::system_clock::now();
+
+	const auto iter = ctx.histograms.find(label);
+	if (iter != ctx.histograms.end())
+	{
+		const auto diffNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - iter->second.getCurrentTS());
+		iter->second.input(diffNanos.count());
+	}
+}
+
+}; // namespace profiler

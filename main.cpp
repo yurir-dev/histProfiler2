@@ -16,6 +16,7 @@
 #warning "thread pinning is not supported for this OS"
 #endif
 
+
 #include "profiler.h"
 
 void testSeconds();
@@ -35,6 +36,7 @@ std::ostream& operator<<(std::ostream& os, const std::set<std::string>& dt)
 }
 
 std::string outputFileName;
+std::ofstream outputFile;
 size_t N{1000};
 int cpuNum{-1};
 
@@ -74,8 +76,8 @@ void parseArgv(int argc, char* argv[])
 			if (i + 1 < argc)
 			{
 				outputFileName = argv[i + 1];
-				std::ofstream f(outputFileName);
-				if (!f)
+				outputFile = std::ofstream(outputFileName);
+				if (!outputFile)
 					usage("FAILED to open " + outputFileName);
 			}
 			else
@@ -136,7 +138,7 @@ void pinCpu()
 //	if (rc != 0) {
 //		std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
 //	}
-//#else
+#else
 	std::cerr << "thread pinning is not supported for this OS" << std::endl;
 #endif
 }
@@ -145,7 +147,14 @@ int main(int argc, char* argv[])
 {
 	parseArgv(argc, argv);
 
-	std::cout << "testType: " << testType 
+#if defined (ENABLE_HIST_PROFILER)
+	const std::string enableProfiler{"profiler is enabled"};
+#else
+	const std::string enableProfiler{ "profiler is NOT enabled" };
+#endif
+
+	std::cout << enableProfiler 
+		<< ", testType: " << testType
 		<< ", outputFileName: " << outputFileName 
 		<< ", N: " << N
 		<< ", affinity: " << cpuNum
@@ -205,7 +214,7 @@ void getBusySqrt(size_t cnt)
 
 void testSeconds()
 {
-	profiler::init({
+	HistProfiler_Init({
 		{"normal distribution", 1'000'000'000, 10},
 		});
 
@@ -218,19 +227,19 @@ void testSeconds()
 		int timeToSleep = static_cast<int>(std::round(dist(gen)));
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("normal distribution");
+		HistProfiler_Begin("normal distribution");
 		std::this_thread::sleep_for(std::chrono::seconds(timeToSleep));
-		profiler::end("normal distribution");
+		HistProfiler_End("normal distribution");
 	}
 
-	if (!outputFileName.empty())
-		profiler::getData(outputFileName);
+	if (outputFile)
+		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
-		profiler::getData();
+		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
 }
 void testMillis()
 {
-	profiler::init({
+	HistProfiler_Init({
 		{"normal distribution", 1'000'000, 20},
 		{"gamma distribution", 1'000'000, 20},
 		});
@@ -244,9 +253,9 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("normal distribution");
+		HistProfiler_Begin("normal distribution");
 		getBusySpin(std::chrono::milliseconds(timeToSleep));
-		profiler::end("normal distribution");
+		HistProfiler_End("normal distribution");
 	}
 
 	// A gamma distribution with alpha=1, and beta=2
@@ -257,22 +266,24 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(distGamma(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("gamma distribution");
+		HistProfiler_Begin("gamma distribution");
 		getBusySpin(std::chrono::milliseconds(timeToSleep));
-		profiler::end("gamma distribution");
+		HistProfiler_End("gamma distribution");
 	}
 
-	if (!outputFileName.empty())
-		profiler::getData(outputFileName);
+	if (outputFile)
+		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
-		profiler::getData();
+		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
 }
 void testMicros()
 {
-	profiler::init({
+	HistProfiler_Init({
 		{"normal distribution 1", 1'000, 100},
 		{"normal distribution 2", 1'000, 100},
 		});
+
+	std::cout << "rrrrr " << __LINE__ << std::endl;
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -284,32 +295,34 @@ void testMicros()
 		timeToSleep += 10;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("normal distribution 1");
+		HistProfiler_Begin("normal distribution 1");
 		getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		profiler::end("normal distribution 1");
+		HistProfiler_End("normal distribution 1");
 	}
 	for (size_t i = 0; i < N; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("normal distribution 2");
+		HistProfiler_Begin("normal distribution 2");
 		getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		profiler::end("normal distribution 2");
+		HistProfiler_End("normal distribution 2");
 	}
 
-	if (!outputFileName.empty())
-		profiler::getData(outputFileName);
+	if (outputFile)
+		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
-		profiler::getData();
+		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
 }
 void testNanos()
 {
-	profiler::init({
+	HistProfiler_Init({
 		{"normal distribution", 10, 500},
 		});
+
+	std::cout << "rrrrr " << __LINE__ << std::endl;
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -321,14 +334,14 @@ void testNanos()
 		size_t timeToSleep = s > 0 ? static_cast<size_t>(s) : 0;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		profiler::begin("normal distribution");
+		HistProfiler_Begin("normal distribution");
 		//getBusySpin(std::chrono::nanoseconds(timeToSleep));
 		getBusySqrt(timeToSleep);
-		profiler::end("normal distribution");
+		HistProfiler_End("normal distribution");
 	}
 
-	if (!outputFileName.empty())
-		profiler::getData(outputFileName);
+	if (outputFile)
+		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
-		profiler::getData();
+		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
 }
