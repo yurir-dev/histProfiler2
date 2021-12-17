@@ -7,7 +7,7 @@ set (EXE_NAME "profiledApp")
 project(${PROJECT_NAME})
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set (SOURCES main.cpp profiler.h profiler.cpp)
@@ -20,7 +20,8 @@ endif()
 # add the executable
 add_executable(${EXE_NAME} ${SOURCES})
 
-
+add_custom_target(run_toto COMMAND echo bla bla bla)
+add_test(NAME test_toto COMMAND ${CMAKE_COMMAND} --build . --target run_toto)
 
 if (UNIX)
 target_link_libraries(${EXE_NAME} pthread)

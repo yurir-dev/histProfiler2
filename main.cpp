@@ -285,8 +285,6 @@ void testMicros()
 		{"normal distribution 2", 1'000, 100, 10},
 		});
 
-	std::cout << "rrrrr " << __LINE__ << std::endl;
-
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
 	std::normal_distribution<> dist{ 10, 2 };
