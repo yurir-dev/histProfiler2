@@ -31,6 +31,8 @@ namespace profiler
 			in an additional bucket allocated at the end.
 		*/
 		size_t numBuckets{1};
+
+		size_t shift{0};
 	};
 
 

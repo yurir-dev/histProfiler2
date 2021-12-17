@@ -281,8 +281,8 @@ void testMillis()
 void testMicros()
 {
 	HistProfiler_Init({
-		{"normal distribution 1", 1'000, 100},
-		{"normal distribution 2", 1'000, 100},
+		{"normal distribution 1", 1'000, 100, 10},
+		{"normal distribution 2", 1'000, 100, 10},
 		});
 
 	std::cout << "rrrrr " << __LINE__ << std::endl;

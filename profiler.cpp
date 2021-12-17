@@ -36,7 +36,18 @@ public:
 		m_sum += s;
 		++m_numSamples;
 
-		const size_t bucket = (size_t)std::round((double)s / (double)m_declaration.samplesPerBucket);
+		size_t bucket = (size_t)std::round((double)s / (double)m_declaration.samplesPerBucket);
+		if (m_declaration.shift > 0)
+		{
+			if (bucket < m_declaration.shift)
+			{
+				++m_underflows;
+				return;
+			}
+			else
+				bucket -= m_declaration.shift;
+		}
+
 		//std::cout << "s: " << s << " bucket: " << bucket << std::endl;
 		if (bucket < m_buckets.size())
 			++m_buckets[bucket];
@@ -89,6 +100,7 @@ private:
 	uint64_t m_maxSample{ 0 };
 	uint64_t m_minSample{ 0xfffffffffffffffLL };
 	uint64_t m_overfows{ 0 };
+	uint64_t m_underflows{0};
 	uint64_t m_sum{ 0 };
 	uint64_t m_numSamples{ 0 };
 
@@ -107,8 +119,12 @@ std::string histogram::toString(bool header, bool data) const
 
 		stringStream << m_declaration.label
 			<< " #buckets: " << m_buckets.size()
-			<< ", #samples: " << m_numSamples
-			<< ", #overflows: " << m_overfows
+			<< ", #samples: " << m_numSamples;
+
+		if (m_declaration.shift > 0)
+			stringStream << ", shift: " << m_declaration.shift;
+
+		stringStream << ", #overflows: " << m_overfows << ", #underflows: " << m_underflows
 			<< ", ns/bucket: " << m_declaration.samplesPerBucket
 			<< ", mean: " << average / m_declaration.samplesPerBucket << ",(" << average << " ns)"
 			<< ", std: " << deviation << ", median: " << median()
