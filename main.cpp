@@ -10,9 +10,11 @@
 #if defined(_WIN32)
 #include <windows.h>
 #elif defined (linux)
-//#define _GNU_SOURCE             /* See feature_test_macros(7) */
-//#include <pthread.h>
-//#else
+#if !defined(_GNU_SOURCE)
+#define _GNU_SOURCE             /* See feature_test_macros(7) */
+#endif
+#include <pthread.h>
+#else
 #warning "thread pinning is not supported for this OS"
 #endif
 
@@ -130,14 +132,14 @@ void pinCpu()
 	DWORD mask = (1 << cpuNum);
 	HANDLE th = GetCurrentThread();
 	DWORD_PTR prev_mask = SetThreadAffinityMask(th, mask);
-//#elif defined (linux)
-//	cpu_set_t cpuset;
-//	CPU_ZERO(&cpuset);
-//	CPU_SET(cpuNum, &cpuset);
-//	int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-//	if (rc != 0) {
-//		std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
-//	}
+#elif defined (linux)
+	cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
+	CPU_SET(cpuNum, &cpuset);
+	int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+	if (rc != 0) {
+		std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
+	}
 #else
 	std::cerr << "thread pinning is not supported for this OS" << std::endl;
 #endif

@@ -122,6 +122,9 @@ namespace profiler
 #define HistProfiler_DumpData(stream, format) do { profiler::getData(stream, format); } while(false)
 #define HistProfiler_Begin(label) do { profiler::begin(label); } while(false)
 #define HistProfiler_End(label) do { profiler::end(label); } while(false)
+
+#pragma message ("compiled with hist profiler")
+
 #else
 #define HistProfiler_Init(...) ((void)0)
 #define HistProfiler_DumpData(stream, format) ((void)0)

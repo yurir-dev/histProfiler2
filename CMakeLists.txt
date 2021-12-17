@@ -6,6 +6,10 @@ set (EXE_NAME "profiledApp")
 # set the project name
 project(${PROJECT_NAME})
 
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 set (SOURCES main.cpp profiler.h profiler.cpp)
 
 set(ENABLE_HIST_PROFILER "true" CACHE BOOL "enables the profiler")
@@ -16,9 +20,11 @@ endif()
 # add the executable
 add_executable(${EXE_NAME} ${SOURCES})
 
-# specify the C++ standard
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+
+if (UNIX)
+target_link_libraries(${EXE_NAME} pthread)
+endif()
 
 #enable_testing()
 #add_test(NAME main COMMAND main)
