@@ -20,6 +20,7 @@
 
 
 #include "profiler.h"
+#include "common.h"
 
 void testSeconds();
 void testMillis();
@@ -188,31 +189,9 @@ int main(int argc, char* argv[])
 
 	std::cout << "finished: " << testType << " test, check the " << (!outputFileName.empty() ? outputFileName : "std:cout") << std::endl;
 
-	return 0;
+	return 1;
 }
 
-template< class Rep, class Period >
-void getBusySleep(const std::chrono::duration<Rep, Period>& sleep_duration)
-{
-	std::this_thread::sleep_for(sleep_duration);
-}
-template< class Rep, class Period >
-void getBusySpin(const std::chrono::duration<Rep, Period>& sleep_duration)
-{
-	const auto endTime = std::chrono::system_clock::now() + sleep_duration;
-	while (auto now = std::chrono::system_clock::now() < endTime)
-	{}
-}
-
-void getBusySqrt(size_t cnt)
-{
-	for (size_t i = 0; i < cnt; ++i)
-	{
-		volatile double s = std::sqrt(i + 1024 * 1024);
-		s = s * s;
-		//s = std::sqrt(i);
-	}
-}
 
 void testSeconds()
 {
@@ -256,7 +235,7 @@ void testMillis()
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		HistProfiler_Begin("normal distribution");
-		getBusySpin(std::chrono::milliseconds(timeToSleep));
+		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
 		HistProfiler_End("normal distribution");
 	}
 
@@ -269,7 +248,7 @@ void testMillis()
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		HistProfiler_Begin("gamma distribution");
-		getBusySpin(std::chrono::milliseconds(timeToSleep));
+		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
 		HistProfiler_End("gamma distribution");
 	}
 
@@ -296,7 +275,7 @@ void testMicros()
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		HistProfiler_Begin("normal distribution 1");
-		getBusySpin(std::chrono::microseconds(timeToSleep));
+		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
 		HistProfiler_End("normal distribution 1");
 	}
@@ -306,7 +285,7 @@ void testMicros()
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
 		HistProfiler_Begin("normal distribution 2");
-		getBusySpin(std::chrono::microseconds(timeToSleep));
+		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
 		HistProfiler_End("normal distribution 2");
 	}
@@ -336,7 +315,7 @@ void testNanos()
 
 		HistProfiler_Begin("normal distribution");
 		//getBusySpin(std::chrono::nanoseconds(timeToSleep));
-		getBusySqrt(timeToSleep);
+		busyMethods::getBusySqrt(timeToSleep);
 		HistProfiler_End("normal distribution");
 	}
 
