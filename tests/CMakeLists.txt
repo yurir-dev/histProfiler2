@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 include_directories(${CMAKE_SOURCE_DIR} ../ )
 
 # Files common to all tests
-set (COMMON_SOURCES ../common.h ../profiler.h ../profiler.cpp)
+set (COMMON_SOURCES ../common.h ../profiler.h ../profiler.cpp histVerificator.h histVerificator.cpp)
 
 # Library setup/shutdown testing
 set(TEST_MILLIS test_milliseconds)

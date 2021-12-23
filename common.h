@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <thread>
+#include <sstream>
+#include <cmath>
 
 struct busyMethods
 {
@@ -27,5 +29,20 @@ struct busyMethods
 			s = s * s;
 			//s = std::sqrt(i);
 		}
+	}
+};
+
+struct common
+{
+	template <typename T>
+	static bool stoT(std::string str, T& res)
+	{
+		T n;
+		std::stringstream ssLine{ str };
+		ssLine >> n;
+		if (ssLine.fail())
+			return false;
+		res = n;
+		return true;
 	}
 };

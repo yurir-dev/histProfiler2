@@ -8,12 +8,13 @@
 
 #include "profiler.h"
 #include "common.h"
+#include "histVerificator.h"
 
-void testMicros(size_t N)
+void testMicros(size_t N, const std::string& outFilename, size_t offset = 0)
 {
 	HistProfiler_Init({
-		{"normal distribution 1", 1'000, 100, 10},
-		{"normal distribution 2", 1'000, 100, 10},
+		{"normal distribution 1", 1'000, 100, offset},
+		{"normal distribution 2", 1'000, 100, offset},
 		});
 
 	std::random_device rd{};
@@ -42,7 +43,7 @@ void testMicros(size_t N)
 		HistProfiler_End("normal distribution 2");
 	}
 
-	std::ofstream outputFile = std::ofstream("test_res");
+	std::ofstream outputFile = std::ofstream(outFilename);
 	if (outputFile)
 		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
@@ -51,9 +52,35 @@ void testMicros(size_t N)
 
 int main(int argc, char* argv[])
 {
-	testMicros(1024);
+	const size_t N{1024};
+	const std::string outputFileName{"test_res"};
+	std::vector<histVerificator::histInfo > infos{
+		{"normal distribution 1", N},
+		{"normal distribution 2", N }
+	};
 
-	// TODO add verification
-
-	return 0;
+	bool res{ true };
+	{
+		testMicros(N, outputFileName, 0);
+		std::string error;
+		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		if (!rc)
+		{
+			std::cerr << error << std::endl;
+			std::cout << error << std::endl;
+		}
+		res &= rc;
+	}
+	{
+		testMicros(N, outputFileName, 10);
+		std::string error;
+		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		if (!rc)
+		{
+			std::cerr << error << std::endl;
+			std::cout << error << std::endl;
+		}
+		res &= rc;
+	}
+	return res ? 0 : 1;
 };

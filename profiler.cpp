@@ -118,7 +118,7 @@ std::string histogram::toString(bool header, bool data) const
 		const auto deviation = std();
 
 		stringStream << m_declaration.label
-			<< " #buckets: " << m_buckets.size()
+			<< ", #buckets: " << m_buckets.size()
 			<< ", #samples: " << m_numSamples;
 
 		if (m_declaration.shift > 0)
@@ -126,7 +126,7 @@ std::string histogram::toString(bool header, bool data) const
 
 		stringStream << ", #overflows: " << m_overfows << ", #underflows: " << m_underflows
 			<< ", ns/bucket: " << m_declaration.samplesPerBucket
-			<< ", mean: " << average / m_declaration.samplesPerBucket << ",(" << average << " ns)"
+			<< ", mean: " << average / m_declaration.samplesPerBucket << "(" << average << " ns)"
 			<< ", std: " << deviation << ", median: " << median()
 			<< ", min: " << m_minSample << "ns, max: " << m_maxSample << "ns";
 	}

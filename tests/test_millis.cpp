@@ -8,12 +8,13 @@
 
 #include "profiler.h"
 #include "common.h"
+#include "histVerificator.h"
 
-void testMillis(size_t N)
+void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 {
 	HistProfiler_Init({
-		{"normal distribution", 1'000'000, 20},
-		{"gamma distribution", 1'000'000, 20},
+		{"normal distribution", 1'000'000, 100, offset},
+		{"gamma distribution", 1'000'000, 100, offset},
 		});
 
 	std::random_device rd{};
@@ -43,7 +44,7 @@ void testMillis(size_t N)
 		HistProfiler_End("gamma distribution");
 	}
 
-	std::ofstream outputFile = std::ofstream("test_res");
+	std::ofstream outputFile = std::ofstream(outFilename);
 	if (outputFile)
 		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
 	else
@@ -52,9 +53,37 @@ void testMillis(size_t N)
 
 int main(int argc, char* argv[])
 {
-	testMillis(128);
+	const size_t N{ 128 };
+	const std::string outputFileName{ "test_res" };
+	std::vector<histVerificator::histInfo > infos{
+		{"normal distribution", N},
+		{"gamma distribution", N }
+	};
 
-	// TODO add verification
+	bool res{ true };
+	{
+		testMillis(N, outputFileName, 0);
+		std::string error;
+		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		if (!rc)
+		{
+			std::cerr << error << std::endl;
+			std::cout << error << std::endl;
+		}
+		res &= rc;
+	}
+	{
+		testMillis(N, outputFileName, 10);
+		std::string error;
+		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		if (!rc)
+		{
+			std::cerr << error << std::endl;
+			std::cout << error << std::endl;
+		}
+		res &= rc;
+	}
+	return res ? 0 : 1;
 
 	return 0;
 };
