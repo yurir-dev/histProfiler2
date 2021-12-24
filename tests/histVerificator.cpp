@@ -50,14 +50,14 @@ bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::
 		if (iter == foundInfos.end())
 		{
 			std::ostringstream stringStream;
-			stringStream << "histogram" << histInfos[i].label << " was not found";
+			stringStream << "histogram " << histInfos[i].label << " was not found";
 			error = stringStream.str();
 			return false;
 		}
 		if (iter->second.numEntries != histInfos[i].numEntries)
 		{
 			std::ostringstream stringStream;
-			stringStream << "histogram" << histInfos[i].label << " has unexpected number of entries " << iter->second.numEntries << " , expected " << histInfos[i].numEntries;
+			stringStream << "histogram " << histInfos[i].label << " has unexpected number of entries " << iter->second.numEntries << " , expected " << histInfos[i].numEntries;
 			error = stringStream.str();
 			return false;
 		}
@@ -142,20 +142,24 @@ void parseExcelFormat(std::ifstream& outputFile, std::unordered_map<std::string,
 	std::string nextLine;
 	while (std::getline(outputFile, nextLine))
 	{
+		if (nextLine.empty())
+			continue;
+
 		size_t i{0};
 		std::stringstream ssLine{ line };
 		for (std::string part; std::getline(ssLine, part, separatorHist); )
 		{
-			if (part.empty())
-				continue;
-			size_t num = std::atoi(part.c_str());
-			indexes[i]->second.numEntries += num;
-			i++;
 			if (i >= indexes.size())
 			{
 				std::cerr << "unexpected number of fields, indexes.size: " << indexes.size() << std::endl;
 				break;
 			}
+			if (part.empty())
+				continue;
+
+			size_t num = std::atoi(part.c_str());
+			indexes[i]->second.numEntries += num;
+			i++;
 		}
 
 		line = std::move(nextLine);
