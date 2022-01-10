@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <string>
-
 #include <iostream>
 
 namespace profiler
@@ -88,6 +87,17 @@ namespace profiler
 	*/
 	void begin(const std::string& label);
 	void end(const std::string& label);
+
+	/*
+		same as begin/end, can be used in different threads with the same labels.
+		will create a separate histogram for each thread.
+		t1					t2
+		startTid(lbl1)		startTid(lbl1)	
+		...					...
+		endTid(lbl1)		endTid(lbl1)
+	*/
+	void beginTid(const std::string& label);
+	void endTid(const std::string& label);
 };
 
 
@@ -124,6 +134,8 @@ namespace profiler
 #define HistProfiler_DumpData(stream, format) do { profiler::getData(stream, format); } while(false)
 #define HistProfiler_Begin(label) do { profiler::begin(label); } while(false)
 #define HistProfiler_End(label) do { profiler::end(label); } while(false)
+#define HistProfiler_BeginTid(label) do { profiler::beginTid(label); } while(false)
+#define HistProfiler_EndTid(label) do { profiler::endTid(label); } while(false)
 
 #pragma message ("compiled with hist profiler")
 
@@ -132,5 +144,7 @@ namespace profiler
 #define HistProfiler_DumpData(stream, format) ((void)0)
 #define HistProfiler_Begin(label) ((void)0)
 #define HistProfiler_End(label) ((void)0)
+#define HistProfiler_BeginTid(label) ((void)0)
+#define HistProfiler_EndTid(label) ((void)0)
 #endif
 

@@ -12,11 +12,18 @@ add_executable(${TEST_MILLIS} test_millis.cpp ${COMMON_SOURCES})
 set(TEST_MICROS test_microseconds)
 add_executable(${TEST_MICROS} test_micros.cpp ${COMMON_SOURCES})
 
+set(TEST_THREADS test_threads)
+add_executable(${TEST_THREADS} test_threads.cpp ${COMMON_SOURCES})
+
+set(exes ${TEST_THREADS} ${TEST_MICROS} ${TEST_MILLIS})
 
 if (UNIX)
-target_link_libraries(${TEST_MILLIS} pthread)
-target_link_libraries(${TEST_MICROS} pthread)
+foreach (exe IN LISTS exes)
+	target_link_libraries(${exe} pthread)
+endforeach()
 endif()
 
-add_test(${TEST_MILLIS} ${TEST_MILLIS})
-add_test(${TEST_MICROS} ${TEST_MICROS})
+foreach (exe IN LISTS exes)
+	add_test(${exe} ${exe})
+endforeach()
+
