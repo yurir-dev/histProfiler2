@@ -14,14 +14,14 @@
 namespace profiler
 {
 
-struct context;
+struct impl;
 
 struct histogram
 {
-	friend context;
+	friend impl;
 public:
 	histogram() = default;
-	histogram(const profiler::declaration& d)
+	histogram(const context::declaration& d)
 	{
 		m_declaration = d;
 		m_buckets.resize(d.numBuckets + 1);
@@ -114,7 +114,7 @@ public:
 
 private:
 	std::vector<uint64_t> m_buckets;
-	profiler::declaration m_declaration;
+	context::declaration m_declaration;
 	uint64_t m_maxSample{ 0 };
 	uint64_t m_minSample{ 0xfffffffffffffffLL };
 	uint64_t m_overfows{ 0 };
@@ -167,9 +167,9 @@ std::ostream& histogram::dump(uint32_t mask, std::ostream& out) const
 
 
 
-struct context
+struct impl: public context::implBase
 {
-	using Key = std::tuple<std::thread::id, std::string>;
+	using Key = std::tuple<std::thread::id, const std::string>;
 	struct hash
 	{
 		std::size_t operator()(const Key& k) const
@@ -184,7 +184,41 @@ struct context
 	std::vector<std::vector<HistIterator_t>> ordered_hists;
 	std::mutex mtx;
 
-	void toXml(std::ostream& out)const;
+	void toXml(std::ostream& out)const
+	{
+		std::ostringstream stringStream;
+
+		for (auto& v : ordered_hists)
+		{
+			for (auto& iter : v)
+			{
+				iter->second.dump(histogram::toString_t::header | histogram::toString_t::label, out) << '\t';
+			}
+		}
+		out << std::endl;
+
+		for (size_t i = 0; true; ++i)
+		{
+			bool moreBuckets{ false };
+			for (auto& v : ordered_hists)
+			{
+				for (auto& iter : v)
+				{
+					if (i < iter->second.m_buckets.size())
+					{
+						moreBuckets = true;
+						out << iter->second.m_buckets[i];
+					}
+					out << '\t';
+
+				}
+			}
+			out << std::endl;
+
+			if (!moreBuckets)
+				break;
+		}
+	}
 	void toStd(std::ostream& out)const
 	{
 		for (auto iter = histograms.cbegin(); iter != histograms.end(); ++iter)
@@ -196,140 +230,102 @@ struct context
 		ordered_hists.clear();
 		histograms.clear();
 	}
-	void init(const std::vector<declaration>& declarations);
+	void init(const std::vector<context::declaration>& declarations);
 };
-context ctx;
 
+
+
+context::context()
+{
+	m_impl = std::make_shared<impl>();
+}
 void context::init(const std::vector<declaration>& declarations)
 {
-	clear();
+	auto ctxImpl = std::reinterpret_pointer_cast<impl>(m_impl);
+	ctxImpl->clear();
 
-	histograms.reserve(declarations.size());
-	ordered_hists.reserve(declarations.size());
+	ctxImpl->histograms.reserve(declarations.size());
+	ctxImpl->ordered_hists.reserve(declarations.size());
 
 	for (auto& d : declarations)
 	{
-		auto pos = histograms.end();
+		auto pos = ctxImpl->histograms.end();
 		bool inserted;
-		std::tie(pos, inserted) = histograms.insert_or_assign(context::Key(std::thread::id(), d.label), histogram(d));
+		std::tie(pos, inserted) = ctxImpl->histograms.insert_or_assign(impl::Key(std::thread::id(), d.label), histogram(d));
 
-		std::vector<HistIterator_t> temp;
+		std::vector<impl::HistIterator_t> temp;
 		temp.push_back(pos);
-		ordered_hists.push_back(std::move(temp));
-	}
-}
-
-void context::toXml(std::ostream& out)const
-{
-	std::ostringstream stringStream;
-
-	for (auto& v : ordered_hists)
-	{
-		for (auto& iter : v)
-		{
-			iter->second.dump(histogram::toString_t::header | histogram::toString_t::label, out) << '\t';
-		}
-	}
-	out << std::endl;
-
-	for (size_t i = 0; true; ++i)
-	{
-		bool moreBuckets{ false };
-		for (auto& v : ordered_hists)
-		{
-			for (auto& iter : v)
-			{
-				if (i < iter->second.m_buckets.size())
-				{
-					moreBuckets = true;
-					out << iter->second.m_buckets[i];
-				}
-				out << '\t';
-
-			}
-		}
-		out << std::endl;
-
-		if (!moreBuckets)
-			break;
+		ctxImpl->ordered_hists.push_back(std::move(temp));
 	}
 }
 
 
-
-
-
-
-
-
-void init(const std::vector<declaration>& declarations)
+void context::getData(std::ostream& out, outFormat f)
 {
-	ctx.init(declarations);
-}
-
-void getData(std::ostream& out, outFormat f)
-{
+	auto ctxImpl = std::reinterpret_pointer_cast<impl>(m_impl);
 	switch (f)
 	{
 	case outFormat::excel:
-		ctx.toXml(out);
+		ctxImpl->toXml(out);
 		break;
 	case outFormat::follow:
-		ctx.toStd(out);
+		ctxImpl->toStd(out);
 		break;
 	default:
 		std::cerr << "invalid format: " << static_cast<int>(f) << " , dump as std" << std::endl;
-		ctx.toStd(out);
+		ctxImpl->toStd(out);
 		break;
 	}
 }
-
-static void beginImpl(const std::string& label, const std::thread::id& tid)
+void context::beginImpl(const std::string& label, const std::thread::id& tid)
 {
-	auto iter = ctx.histograms.find(std::tuple(tid, label));
-	if (iter != ctx.histograms.end())
+	auto ctxImpl = std::reinterpret_pointer_cast<impl>(m_impl);
+	auto iter = ctxImpl->histograms.find(std::tuple(tid, label));
+	if (iter != ctxImpl->histograms.end())
 		iter->second.setCurrentTS(std::chrono::system_clock::now());
 }
-static void endImpl(const std::string& label, const std::thread::id& tid)
+void context::endImpl(const std::string& label, const std::thread::id& tid)
 {
 	const auto now = std::chrono::system_clock::now();
 
-	const auto iter = ctx.histograms.find(context::Key(tid, label));
-	if (iter != ctx.histograms.end())
+	auto ctxImpl = std::reinterpret_pointer_cast<impl>(m_impl);
+	const auto iter = ctxImpl->histograms.find(impl::Key(tid, label));
+	if (iter != ctxImpl->histograms.end())
 	{
 		const auto diffNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - iter->second.getCurrentTS());
 		iter->second.input(diffNanos.count());
 	}
 }
 
-void begin(const std::string& label)
+void context::begin(const std::string& label)
 {
 	beginImpl(label, std::thread::id());
 }
-void end(const std::string& label)
+void context::end(const std::string& label)
 {
 	endImpl(label, std::thread::id());
 }
-void beginTid(const std::string& label)
+void context::beginTid(const std::string& label)
 {
 	std::thread::id tid = std::this_thread::get_id();
 
 	static thread_local std::once_flag f;
-	std::call_once(f, [&label, &tid]() {
-		auto iter = ctx.histograms.find(std::tuple(std::thread::id(), label));
-		if (iter != ctx.histograms.end())
+	std::call_once(f, [this, &label, &tid]() {
+		auto ctxImpl = std::reinterpret_pointer_cast<impl>(m_impl);
+		auto iter = ctxImpl->histograms.find(std::tuple(std::thread::id(), label));
+		if (iter != ctxImpl->histograms.end())
 		{
-			auto pos{ ctx.histograms.end() };
+			auto pos{ ctxImpl->histograms.end() };
 			bool inserted;
 
-			std::lock_guard<std::mutex> l{ ctx.mtx };
-			std::tie(pos, inserted) = ctx.histograms.insert_or_assign(context::Key(tid, label), iter->second);
+			std::lock_guard<std::mutex> l{ ctxImpl->mtx };
+			std::tie(pos, inserted) = ctxImpl->histograms.insert_or_assign(impl::Key(tid, label), iter->second);
 			
-			auto vec_iter = std::find_if(ctx.ordered_hists.begin(), ctx.ordered_hists.end(), [&iter](auto& v)
+			auto vec_iter = std::find_if(ctxImpl->ordered_hists.begin(), ctxImpl->ordered_hists.end(), [&iter](auto& v)
 				{
 					return v.end() != std::find_if(v.begin(), v.end(), [&iter](auto& it) { return it == iter; });
 				});
-			if (vec_iter != ctx.ordered_hists.end())
+			if (vec_iter != ctxImpl->ordered_hists.end())
 			{
 				vec_iter->push_back(pos);
 
@@ -339,7 +335,7 @@ void beginTid(const std::string& label)
 	
 	beginImpl(label, tid);
 }
-void endTid(const std::string& label)
+void context::endTid(const std::string& label)
 {
 	endImpl(label, std::this_thread::get_id());
 }

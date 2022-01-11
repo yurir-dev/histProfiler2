@@ -15,9 +15,11 @@ int main(int argc, char* argv[])
 	const size_t N {1024};
 	const std::string outputFileName{ "test_res_threads" };
 
-	HistProfiler_Init({
-		{"dist 1", 1'000, 90, 0},
-		{"dist 2", 1'000, 100, 0}
+	profiler::context ctx;
+	HistProfiler_Init(ctx,
+		{
+			{"dist 1", 1'000, 90, 0},
+			{"dist 2", 1'000, 100, 0}
 		});
 
 	std::random_device rd{};
@@ -31,10 +33,10 @@ int main(int argc, char* argv[])
 			timeToSleep += offset;
 			//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-			HistProfiler_BeginTid(label);
+			HistProfiler_BeginTid(ctx, label);
 			busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 			//getBusySqrt(timeToSleep);
-			HistProfiler_EndTid(label);
+			HistProfiler_EndTid(ctx, label);
 		}
 	};
 
@@ -51,9 +53,9 @@ int main(int argc, char* argv[])
 
 	std::ofstream outputFile = std::ofstream(outputFileName);
 	if (outputFile)
-		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
+		HistProfiler_DumpData(ctx, outputFile, profiler::outFormat::excel);
 	else
-		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
+		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 
 	return 0;
 }

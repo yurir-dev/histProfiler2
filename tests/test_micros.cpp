@@ -12,9 +12,11 @@
 
 void testMicros(size_t N, const std::string& outFilename, size_t offset = 0)
 {
-	HistProfiler_Init({
-		{"normal distribution 1", 1'000, 100, offset},
-		{"normal distribution 2", 1'000, 100, offset},
+	profiler::context ctx;
+	HistProfiler_Init(ctx, 
+		{
+			{"normal distribution 1", 1'000, 100, offset},
+			{"normal distribution 2", 1'000, 100, offset},
 		});
 
 	std::random_device rd{};
@@ -27,27 +29,27 @@ void testMicros(size_t N, const std::string& outFilename, size_t offset = 0)
 		timeToSleep += 10;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin("normal distribution 1");
+		HistProfiler_Begin(ctx, "normal distribution 1");
 		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		HistProfiler_End("normal distribution 1");
+		HistProfiler_End(ctx, "normal distribution 1");
 	}
 	for (size_t i = 0; i < N; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin("normal distribution 2");
+		HistProfiler_Begin(ctx, "normal distribution 2");
 		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		HistProfiler_End("normal distribution 2");
+		HistProfiler_End(ctx, "normal distribution 2");
 	}
 
 	std::ofstream outputFile = std::ofstream(outFilename);
 	if (outputFile)
-		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
+		HistProfiler_DumpData(ctx, outputFile, profiler::outFormat::excel);
 	else
-		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
+		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
 
 int main(int argc, char* argv[])

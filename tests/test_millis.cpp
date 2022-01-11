@@ -12,9 +12,11 @@
 
 void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 {
-	HistProfiler_Init({
-		{"normal distribution", 1'000'000, 100, offset},
-		{"gamma distribution", 1'000'000, 100, offset},
+	profiler::context ctx;
+	HistProfiler_Init(ctx, 
+		{
+			{"normal distribution", 1'000'000, 100, offset},
+			{"gamma distribution", 1'000'000, 100, offset},
 		});
 
 	std::random_device rd{};
@@ -26,9 +28,9 @@ void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin("normal distribution");
+		HistProfiler_Begin(ctx, "normal distribution");
 		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
-		HistProfiler_End("normal distribution");
+		HistProfiler_End(ctx, "normal distribution");
 	}
 
 	// A gamma distribution with alpha=1, and beta=2
@@ -39,16 +41,16 @@ void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 		size_t timeToSleep = static_cast<size_t>(std::round(distGamma(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin("gamma distribution");
+		HistProfiler_Begin(ctx, "gamma distribution");
 		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
-		HistProfiler_End("gamma distribution");
+		HistProfiler_End(ctx, "gamma distribution");
 	}
 
 	std::ofstream outputFile = std::ofstream(outFilename);
 	if (outputFile)
-		HistProfiler_DumpData(outputFile, profiler::outFormat::excel);
+		HistProfiler_DumpData(ctx, outputFile, profiler::outFormat::excel);
 	else
-		HistProfiler_DumpData(std::cout, profiler::outFormat::follow);
+		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
 
 int main(int argc, char* argv[])
