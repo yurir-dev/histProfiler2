@@ -6,7 +6,7 @@
 #include <set>
 #include <fstream>
 
-#include "profiler.h"
+#include "profilerApi.h"
 #include "common.h"
 #include "histVerificator.h"
 
@@ -56,7 +56,7 @@ void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 int main(int argc, char* argv[])
 {
 	const size_t N{ 128 };
-	const std::string outputFileName{ "test_res" };
+	const std::string outputFileName{ "test_res_millis" };
 	std::vector<histVerificator::histInfo > infos{
 		{"normal distribution", N},
 		{"gamma distribution", N }
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 	{
 		testMillis(N, outputFileName, 0);
 		std::string error;
-		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		bool rc = histVerificator::verify(infos, outputFileName, static_cast<int>(profiler::outFormat::excel), error);
 		if (!rc)
 		{
 			std::cerr << error << std::endl;
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 	{
 		testMillis(N, outputFileName, 10);
 		std::string error;
-		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		bool rc = histVerificator::verify(infos, outputFileName, static_cast<int>(profiler::outFormat::excel), error);
 		if (!rc)
 		{
 			std::cerr << error << std::endl;

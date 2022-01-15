@@ -1,6 +1,6 @@
 #include "histVerificator.h"
 #include "common.h"
-
+#include "profiler.h"
 #include <unordered_map>
 #include <fstream>
 #include <sstream>
@@ -10,7 +10,7 @@ static const char separatorHist{ '\t' }, separatorFields{ ',' }, separatorAttrib
 static void parseExcelFormat(std::ifstream& outputFile, std::unordered_map<std::string, histVerificator::histInfo>& foundInfos);
 static void parseFollowFormat(std::ifstream& outputFile, std::unordered_map<std::string, histVerificator::histInfo>& foundInfos);
 
-bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::string& fileName, profiler::outFormat frmt, std::string& error)
+bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::string& fileName, int frmt, std::string& error)
 {
 	std::ifstream outputFile = std::ifstream(fileName);
 	if (!outputFile)
@@ -22,7 +22,7 @@ bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::
 	std::unordered_map<std::string, histInfo> foundInfos;
 	foundInfos.reserve(histInfos.size());
 
-	switch(frmt)
+	switch(static_cast<profiler::outFormat>(frmt))
 	{
 		case profiler::outFormat::excel:
 			parseExcelFormat(outputFile, foundInfos);
@@ -67,7 +67,6 @@ bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::
 
 	return true;
 }
-
 std::string getHeaderAttribute(const std::string& line, size_t index, char separator)
 {
 	int i = 0;

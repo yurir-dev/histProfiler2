@@ -1,6 +1,6 @@
 #pragma once
 
-#include "profiler.h"
+
 #include <string>
 #include <vector>
 
@@ -18,5 +18,5 @@ public:
 		return: empty string on success
 				error string on failures
 	*/
-	static bool verify(const std::vector<histInfo>& histInfos, const std::string& fileName, profiler::outFormat frmt, std::string& errors);
+	static bool verify(const std::vector<histInfo>& histInfos, const std::string& fileName, int frmt, std::string& errors);
 };

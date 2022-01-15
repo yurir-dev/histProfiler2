@@ -19,7 +19,7 @@
 #endif
 
 
-#include "profiler.h"
+#include "profilerApi.h"
 #include "common.h"
 
 void testSeconds();

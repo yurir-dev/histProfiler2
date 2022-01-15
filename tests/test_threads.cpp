@@ -6,9 +6,10 @@
 #include <set>
 #include <fstream>
 
-#include "profiler.h"
+#include "profilerApi.h"
 #include "common.h"
 #include "histVerificator.h"
+
 
 int main(int argc, char* argv[])
 {

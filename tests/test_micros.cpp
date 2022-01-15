@@ -6,7 +6,7 @@
 #include <set>
 #include <fstream>
 
-#include "profiler.h"
+#include "profilerApi.h"
 #include "common.h"
 #include "histVerificator.h"
 
@@ -55,7 +55,7 @@ void testMicros(size_t N, const std::string& outFilename, size_t offset = 0)
 int main(int argc, char* argv[])
 {
 	const size_t N{1024};
-	const std::string outputFileName{"test_res"};
+	const std::string outputFileName{"test_res_micros"};
 	std::vector<histVerificator::histInfo > infos{
 		{"normal distribution 1", N},
 		{"normal distribution 2", N }
@@ -65,22 +65,20 @@ int main(int argc, char* argv[])
 	{
 		testMicros(N, outputFileName, 0);
 		std::string error;
-		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		bool rc = histVerificator::verify(infos, outputFileName, static_cast<int>(profiler::outFormat::excel), error);
 		if (!rc)
 		{
-			std::cerr << error << std::endl;
-			std::cout << error << std::endl;
+			std::cerr << __FILE__ << ":" << __LINE__ << " - " << error << std::endl;
 		}
 		res &= rc;
 	}
 	{
 		testMicros(N, outputFileName, 10);
 		std::string error;
-		bool rc = histVerificator::verify(infos, outputFileName, profiler::outFormat::excel, error);
+		bool rc = histVerificator::verify(infos, outputFileName, static_cast<int>(profiler::outFormat::excel), error);
 		if (!rc)
 		{
-			std::cerr << error << std::endl;
-			std::cout << error << std::endl;
+			std::cerr << __FILE__ << ":" << __LINE__ << " - " << error << std::endl;
 		}
 		res &= rc;
 	}
