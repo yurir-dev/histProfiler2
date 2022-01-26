@@ -69,7 +69,7 @@ bool histVerificator::verify(const std::vector<histInfo>& histInfos, const std::
 }
 std::string getHeaderAttribute(const std::string& line, size_t index, char separator)
 {
-	int i = 0;
+	size_t i = 0;
 	std::stringstream ssLine{ line };
 	for (std::string attribute; std::getline(ssLine, attribute, separator); )
 	{
@@ -164,7 +164,7 @@ void parseExcelFormat(std::ifstream& outputFile, std::unordered_map<std::string,
 		line = std::move(nextLine);
 	}
 }
-void parseFollowFormat(std::ifstream& outputFile, std::unordered_map<std::string, histVerificator::histInfo>& foundInfos)
+void parseFollowFormat(std::ifstream& /*outputFile*/, std::unordered_map<std::string, histVerificator::histInfo>& /*foundInfos*/)
 {
 
 }

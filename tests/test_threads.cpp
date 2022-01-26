@@ -11,7 +11,7 @@
 #include "histVerificator.h"
 
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv*/[])
 {
 	const size_t N {1024};
 	const std::string outputFileName{ "test_res_threads" };

@@ -53,7 +53,7 @@ void testMillis(size_t N, const std::string& outFilename, size_t offset = 0)
 		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv*/[])
 {
 	const size_t N{ 128 };
 	const std::string outputFileName{ "test_res_millis" };

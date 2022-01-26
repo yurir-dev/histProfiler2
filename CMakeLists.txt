@@ -5,6 +5,17 @@ set (EXE_NAME "profiledApp")
 
 project(${PROJECT_NAME})
 
+if(MSVC)
+    add_compile_options("/W4" "/WX" "$<$<CONFIG:RELEASE>:/O2>")
+else()
+    add_compile_options("-Wall" "-Wextra" "-Werror" "$<$<CONFIG:RELEASE>:-O3>")
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options("-stdlib=libc++")
+    else()
+        # nothing special for gcc at the moment
+    endif()
+endif()
+
 include_directories(${CMAKE_SOURCE_DIR} histProfiler)
 
 set(CMAKE_CXX_STANDARD 17)
