@@ -3,13 +3,21 @@
 Very lightweight performance profiler based on inserting timestamps sampling in to the tested code.
 
 {
+
   profiler::context ctx;
+  
   loop {
+  
 	HistProfiler_Begin(ctx, “part1 of my code”)
+	
 	…
+	
 	HistProfiler_End(ctx, “part1 of my code”)
+	
   }
+  
 }
+
 
 the result will be a histogram with sampled time frequencies, for example, tested code took 100ns 123 times and 200ns 20 times, and so on. 
 
