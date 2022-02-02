@@ -36,9 +36,7 @@ int testStrings()
 
 		timeToWaist += 100;
 
-		HistProfiler_Begin(ctx, "hist 2");
-		wasteTime(timeToWaist);
-		HistProfiler_End(ctx, "hist 2");
+		HistProfiled(ctx, "hist 2", wasteTime, timeToWaist);
 	}
 
 	std::ofstream outputFile = std::ofstream("test_res_strings");
@@ -89,9 +87,7 @@ int testEnum()
 
 		timeToWaist += 100;
 
-		HistProfiler_Begin(ctx, histTypes::hist2);
-		wasteTime(timeToWaist);
-		HistProfiler_End(ctx, histTypes::hist2);
+		HistProfiled(ctx, histTypes::hist2, wasteTime, timeToWaist);
 	}
 
 	std::ofstream outputFile = std::ofstream("test_res_enum");

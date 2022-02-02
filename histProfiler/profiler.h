@@ -49,6 +49,8 @@ namespace profiler
 	class context final
 	{
 	public:
+		using label_t = Label_t;
+
 		context() = default;
 		context(const context&) = delete;
 		context& operator=(const context&) = delete;

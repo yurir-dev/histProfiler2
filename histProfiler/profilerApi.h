@@ -86,7 +86,10 @@
 #define HistProfiler_BeginTid(ctx, label) do { ctx.beginTid(label); } while(false)
 #define HistProfiler_EndTid(ctx, label) do { ctx.endTid(label); } while(false)
 
+#define HistProfiled(ctx, label, func, ...) do { HistProfiler_Begin(ctx, label); func(__VA_ARGS__); HistProfiler_End(ctx, label); } while(false)
+
 #pragma message ("compiled with histnamespace profiler")
+
 
 #else
 
@@ -103,5 +106,7 @@ namespace profiler
 #define HistProfiler_End(...) ((void)0)
 #define HistProfiler_BeginTid(...) ((void)0)
 #define HistProfiler_EndTid(...) ((void)0)
+
+#define HistProfiled(ctx, label, func, ...) do { func(__VA_ARGS__); } while(false)
 
 #endif

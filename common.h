@@ -5,6 +5,10 @@
 #include <sstream>
 #include <cmath>
 
+
+#define UNUSED(p) ((void)p)
+
+
 struct busyMethods
 {
 	template< class Rep, class Period >

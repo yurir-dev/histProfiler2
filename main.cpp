@@ -132,7 +132,7 @@ void pinCpu()
 #if defined(_WIN32)
 	DWORD mask = (1 << cpuNum);
 	HANDLE th = GetCurrentThread();
-	DWORD_PTR prev_mask = SetThreadAffinityMask(th, mask);
+	/*DWORD_PTR prev_mask = */ SetThreadAffinityMask(th, mask);
 #elif defined (linux)
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
@@ -146,8 +146,32 @@ void pinCpu()
 #endif
 }
 
+template <typename func, typename ... args_t>
+auto profiled(func f, args_t ... args)
+{
+	return f(args...);
+}
+
+void printInt(int p1, int p2)
+{
+	if (p1 == p2)
+		std::cout << "ret: " << 42 << std::endl;
+	std::cout << "ret: " << 41 << std::endl;
+}
+int getInt(int p1, int p2)
+{
+	if (p1 == p2)
+		std::cout << "ret: " << 52 << std::endl;
+	std::cout << "ret: " << 51 << std::endl;
+	return 52;
+}
+
 int main(int argc, char* argv[])
 {
+	profiled(printInt, 1, 2);
+	int ret = profiled(getInt, 1, 2);
+	std::cout << "ret: " << ret << std::endl;
+
 	parseArgv(argc, argv);
 
 #if defined (ENABLE_HIST_PROFILER)
@@ -237,9 +261,11 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "normal distribution");
-		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
-		HistProfiler_End(ctx, "normal distribution");
+		HistProfiled(ctx, "normal distribution", busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
+
+		//HistProfiler_Begin(ctx, "normal distribution");
+		//busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
+		//HistProfiler_End(ctx, "normal distribution");
 	}
 
 	// A gamma distribution with alpha=1, and beta=2
@@ -250,9 +276,11 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(distGamma(gen)));
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "gamma distribution");
-		busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
-		HistProfiler_End(ctx, "gamma distribution");
+		HistProfiled(ctx, "gamma distribution", busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
+
+		//HistProfiler_Begin(ctx, "gamma distribution");
+		//busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
+		//HistProfiler_End(ctx, "gamma distribution");
 	}
 
 	if (outputFile)

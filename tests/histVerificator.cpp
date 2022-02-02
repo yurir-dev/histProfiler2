@@ -108,60 +108,66 @@ void parseExcelFormat(std::ifstream& outputFile, std::unordered_map<std::string,
 
 	std::vector<std::unordered_map<std::string, histVerificator::histInfo>::iterator> indexes;
 
-	// parse first line: labels and hist info
-	std::getline(outputFile, line);
-	std::stringstream ssLine{line};
-	for (std::string part; std::getline(ssLine, part, separatorHist); )
 	{
-		// first field is label
-		std::string name = getHeaderAttribute(part, 0, separatorFields);
-		if (name.empty())
-		{
-			std::cerr << "empty hist name: " << part << std::endl;
-			continue;
-		}
-
-		size_t overflows{ 0 };
-		common::stoT(getHeaderAttributeValue(part, " #overflows", separatorAttribute), overflows);
-		size_t underflows{ 0 };
-		common::stoT(getHeaderAttributeValue(part, " #underflows", separatorAttribute), underflows);
-
-		foundInfos[name] = histVerificator::histInfo{ name , overflows + underflows };
-		indexes.push_back(foundInfos.find(name));
-	}
-
-	/* parse data, skip the last line,
-	164	0	
-	193	0	
-	186	0	
-	123	0	
-	*/
-	if (!std::getline(outputFile, line))
-		return;
-	std::string nextLine;
-	while (std::getline(outputFile, nextLine))
-	{
-		if (nextLine.empty())
-			continue;
-
-		size_t i{0};
+		// parse first line: labels and hist info
+		std::getline(outputFile, line);
 		std::stringstream ssLine{ line };
 		for (std::string part; std::getline(ssLine, part, separatorHist); )
 		{
-			if (i >= indexes.size())
+			// first field is label
+			std::string name = getHeaderAttribute(part, 0, separatorFields);
+			if (name.empty())
 			{
-				std::cerr << "unexpected number of fields, indexes.size: " << indexes.size() << std::endl;
-				break;
+				std::cerr << "empty hist name: " << part << std::endl;
+				continue;
 			}
-			if (part.empty())
+
+			size_t overflows{ 0 };
+			common::stoT(getHeaderAttributeValue(part, " #overflows", separatorAttribute), overflows);
+			size_t underflows{ 0 };
+			common::stoT(getHeaderAttributeValue(part, " #underflows", separatorAttribute), underflows);
+
+			foundInfos[name] = histVerificator::histInfo{ name , overflows + underflows };
+			indexes.push_back(foundInfos.find(name));
+		}
+	}
+
+	{
+		/* parse data, skip the last line,
+		164	0
+		193	0
+		186	0
+		123	0
+		*/
+		if (!std::getline(outputFile, line))
+			return;
+		std::string nextLine;
+		while (std::getline(outputFile, nextLine))
+		{
+			const char* typeOfSpaces = " \t\n\r\f\v";
+			std::size_t pos = nextLine.find_first_not_of(typeOfSpaces);
+			if (pos == std::string::npos)
 				continue;
 
-			size_t num = std::atoi(part.c_str());
-			indexes[i]->second.numEntries += num;
-			i++;
-		}
+			size_t i{ 0 };
+			std::stringstream ssLine{ line };
+			for (std::string part; std::getline(ssLine, part, separatorHist); )
+			{
+				if (i >= indexes.size())
+				{
+					std::cerr << "unexpected number of fields, indexes.size: " << indexes.size() << std::endl;
+					break;
+				}
+				if (part.empty())
+					continue;
 
-		line = std::move(nextLine);
+				size_t num = std::atoi(part.c_str());
+				indexes[i]->second.numEntries += num;
+				i++;
+			}
+
+			line = std::move(nextLine);
+		}
 	}
 }
 void parseFollowFormat(std::ifstream& /*outputFile*/, std::unordered_map<std::string, histVerificator::histInfo>& /*foundInfos*/)
