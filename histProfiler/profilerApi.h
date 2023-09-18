@@ -79,7 +79,6 @@
 
 #include "profiler.h"
 
-#define HistProfiler_Init(ctx, ...) do { ctx.init(__VA_ARGS__); } while(false)
 #define HistProfiler_DumpData(ctx, stream, format) do { ctx.getData(stream, format); } while(false)
 #define HistProfiler_Begin(ctx, label) do { ctx.begin(label); } while(false)
 #define HistProfiler_End(ctx, label) do { ctx.end(label); } while(false)
@@ -96,11 +95,8 @@
 namespace profiler
 {
 	enum class outFormat { follow, excel };
-
-	template <class Label_t = void, class Label2Str_t = void>
 	class context {};
 };
-#define HistProfiler_Init(...) ((void)ctx)
 #define HistProfiler_DumpData(...) ((void)0)
 #define HistProfiler_Begin(...) ((void)0)
 #define HistProfiler_End(...) ((void)0)

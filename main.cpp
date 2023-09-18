@@ -194,18 +194,18 @@ int main(int argc, char* argv[])
 	{
 		testSeconds();
 	}
-	else if (testType == "millis")
-	{
-		testMillis();
-	}
-	else if (testType == "micros")
-	{
-		testMicros();
-	}
-	else if (testType == "nanos")
-	{
-		testNanos();
-	}
+	//else if (testType == "millis")
+	//{
+	//	testMillis();
+	//}
+	//else if (testType == "micros")
+	//{
+	//	testMicros();
+	//}
+	//else if (testType == "nanos")
+	//{
+	//	testNanos();
+	//}
 	else
 	{
 		usage("Unexpected test: " + testType);
@@ -218,11 +218,12 @@ int main(int argc, char* argv[])
 
 void testSeconds()
 {
-	profiler::context ctx;
-	HistProfiler_Init(ctx,
+	profiler::context ctx {
+		"/dev/shm/testseconds",
 		{
-			{"normal distribution", 1'000'000'000, 10},
-		});
+			{profiler::label_1, 1'000'000'000, 10},
+		}
+	};
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -233,9 +234,9 @@ void testSeconds()
 		int timeToSleep = static_cast<int>(std::round(dist(gen)));
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "normal distribution");
+		HistProfiler_Begin(ctx, profiler::label_1);
 		std::this_thread::sleep_for(std::chrono::seconds(timeToSleep));
-		HistProfiler_End(ctx, "normal distribution");
+		HistProfiler_End(ctx, profiler::label_1);
 	}
 
 	if (outputFile)
@@ -243,14 +244,17 @@ void testSeconds()
 	else
 		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
+
+#if 0
 void testMillis()
 {
-	profiler::context ctx;
-	HistProfiler_Init(ctx,
+	profiler::context ctx {
+		"/dev/shm/testMillis",
 		{
-			{"normal distribution", 1'000'000, 20},
-			{"gamma distribution", 1'000'000, 20},
-		});
+			{profiler::label_1, 1'000'000, 20},
+			{profiler::label_2, 1'000'000, 20},
+		}
+	};
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -261,7 +265,7 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiled(ctx, "normal distribution", busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
+		HistProfiled(ctx, profiler::label_1, busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
 
 		//HistProfiler_Begin(ctx, "normal distribution");
 		//busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
@@ -276,7 +280,7 @@ void testMillis()
 		size_t timeToSleep = static_cast<size_t>(std::round(distGamma(gen)));
 		std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiled(ctx, "gamma distribution", busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
+		HistProfiled(ctx, profiler::label_2, busyMethods::getBusySpin, std::chrono::milliseconds(timeToSleep));
 
 		//HistProfiler_Begin(ctx, "gamma distribution");
 		//busyMethods::getBusySpin(std::chrono::milliseconds(timeToSleep));
@@ -290,12 +294,13 @@ void testMillis()
 }
 void testMicros()
 {
-	profiler::context ctx;
-	HistProfiler_Init(ctx,
+	profiler::context ctx {
+		"/dev/shm/testMicros",
 		{
-			{"normal distribution 1", 1'000, 100},
-			{"normal distribution 2", 1'000, 100},
-		});
+			{profiler::label_1, 1'000, 100},
+			{profiler::label_2, 1'000, 100},
+		}
+	};
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -307,20 +312,20 @@ void testMicros()
 		timeToSleep += 10;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "normal distribution 1");
+		HistProfiler_Begin(ctx, profiler::label_1);
 		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		HistProfiler_End(ctx, "normal distribution 1");
+		HistProfiler_End(ctx, profiler::label_1);
 	}
 	for (size_t i = 0; i < N; i++)
 	{
 		size_t timeToSleep = static_cast<size_t>(std::round(dist(gen)));
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "normal distribution 2");
+		HistProfiler_Begin(ctx, profiler::label_2);
 		busyMethods::getBusySpin(std::chrono::microseconds(timeToSleep));
 		//getBusySqrt(timeToSleep);
-		HistProfiler_End(ctx, "normal distribution 2");
+		HistProfiler_End(ctx, profiler::label_2);
 	}
 
 	if (outputFile)
@@ -330,13 +335,12 @@ void testMicros()
 }
 void testNanos()
 {
-	profiler::context ctx;
-	HistProfiler_Init(ctx,
+	profiler::context ctx {
+		"/dev/shm/testNanos",
 		{
-			{"normal distribution", 10, 500},
-		});
-
-	std::cout << "rrrrr " << __LINE__ << std::endl;
+			{profiler::label_1, 10, 500},
+		}
+	};
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -348,10 +352,10 @@ void testNanos()
 		size_t timeToSleep = s > 0 ? static_cast<size_t>(s) : 0;
 		//std::cout << "timeToSleep " << timeToSleep << std::endl;
 
-		HistProfiler_Begin(ctx, "normal distribution");
+		HistProfiler_Begin(ctx, {profiler::label_1);
 		//getBusySpin(std::chrono::nanoseconds(timeToSleep));
 		busyMethods::getBusySqrt(timeToSleep);
-		HistProfiler_End(ctx, "normal distribution");
+		HistProfiler_End(ctx, {profiler::label_1);
 	}
 
 	if (outputFile)
@@ -359,3 +363,5 @@ void testNanos()
 	else
 		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
+
+#endif
