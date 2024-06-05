@@ -1,6 +1,13 @@
+
 #include "profilerApi.h"
+
 #include <random>
 #include <fstream>
+#include <string.h>
+#include <chrono>
+#include <vector>
+#include <thread>
+#include <iostream>
 
 void wasteTime(size_t cnt)
 {
@@ -12,94 +19,83 @@ void wasteTime(size_t cnt)
 	}
 }
 
-int testStrings()
+int testMacros()
 {
-	profiler::context ctx;
-
-	// labels are strings, time units are microseconds
-	HistProfiler_Init(ctx,
-		{
-			{"hist 1", 1'000, 100},
-			{"hist 2", 1'000, 100},
-		});
+	ThreadLocalHist(basic, 1000, 500, "basic test of macros");
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
-	std::normal_distribution<> dist{ 1000, 100 };
-	for (size_t i = 0; i < 1024; i++)
+	std::normal_distribution<> dist{ 2000, 100 };
+
+	for (size_t i = 0; i < 1024 * 1024; i++)
 	{
 		size_t timeToWaist = static_cast<size_t>(std::round(dist(gen)));
 	
-		HistProfiler_Begin(ctx, "hist 1");
+		BeginProfiler(basic);
 		wasteTime(timeToWaist);
-		HistProfiler_End(ctx, "hist 1");
-
-		timeToWaist += 100;
-
-		HistProfiled(ctx, "hist 2", wasteTime, timeToWaist);
+		EndProfiler(basic);
+		std::this_thread::sleep_for(std::chrono::milliseconds{10});
 	}
-
-	std::ofstream outputFile = std::ofstream("test_res_strings");
-	HistProfiler_DumpData(ctx, outputFile, profiler::outFormat::excel);
 
 	return 0;
 }
 
+int testMacrosMiltipleThreads()
+{
+	std::cout << "basic test of macros with threads" << std::endl;
+	auto func{[](double stdev){
+		std::random_device rd{};
+		std::mt19937 gen{ rd() };
+		std::normal_distribution<> dist{ 2000, 100 * stdev };
 
-enum class histTypes
-{
-	hist1,
-	hist2
-};
-struct hist2Types
-{
-	std::string operator()(histTypes t)
-	{
-		switch (t)
+		for (size_t i = 0; i < 1024 * 1024; i++)
 		{
-			case histTypes::hist1: return "enum hist1";
-			case histTypes::hist2: return "enum hist2";
-			default: return "invalid";
+			size_t timeToWaist = static_cast<size_t>(std::round(dist(gen)));
+
+			ThreadLocalHist(basicThreads, 1000, 500, "basic test of macros with threads");
+
+			BeginProfiler(basicThreads);
+			wasteTime(timeToWaist);
+			EndProfiler(basicThreads);
+			std::this_thread::sleep_for(std::chrono::milliseconds{10});
 		}
-	}
-};
-int testEnum()
-{
-	profiler::context<histTypes, hist2Types> ctx;
-
-	// labels are enums, time units are microseconds
-	HistProfiler_Init(ctx,
-		{
-			{histTypes::hist1, 1'000, 100},
-			{histTypes::hist2, 1'000, 100},
-		});
-
-	std::random_device rd{};
-	std::mt19937 gen{ rd() };
-	std::normal_distribution<> dist{ 1000, 100 };
-	for (size_t i = 0; i < 1024; i++)
+	}};
+	
+	std::vector<std::thread> threads;
+	for (size_t i = 0 ; i < 4 ; ++i)
 	{
-		size_t timeToWaist = static_cast<size_t>(std::round(dist(gen)));
-
-		HistProfiler_Begin(ctx, histTypes::hist1);
-		wasteTime(timeToWaist);
-		HistProfiler_End(ctx, histTypes::hist1);
-
-		timeToWaist += 100;
-
-		HistProfiled(ctx, histTypes::hist2, wasteTime, timeToWaist);
+		threads.emplace(threads.end(), func, i);
 	}
-
-	std::ofstream outputFile = std::ofstream("test_res_enum");
-	HistProfiler_DumpData(ctx, outputFile, profiler::outFormat::excel);
-
+	std::this_thread::sleep_for(std::chrono::seconds{1});
+	for(auto& t : threads)
+	{
+		if(t.joinable())
+			t.join();
+	}
+	
 	return 0;
+}
+
+void testRateCnt()
+{
+	ThreadLocalRateCnt (rateEvents,
+						1'000'000'000 /* events / second*/, 
+						100, /* size of the array of last rates to keep*/ 
+						"basic test of rate counter");
+
+	size_t repeat{100000000};
+	while(repeat-- != 0)
+	{
+		wasteTime(2000);
+		RateCntSample(rateEvents, 1);
+	}
 }
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-	testEnum();
-	testStrings();
-	
+	//testRateCnt();
+	//testMacros();
+	testMacrosMiltipleThreads();
+
 	return 0;
 }

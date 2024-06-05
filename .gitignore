@@ -1,4 +1,7 @@
 CMakeBuild
 build
 Testing
+.vscode
+*.pyc
+
 

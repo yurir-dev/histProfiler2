@@ -1,3 +1,78 @@
+
+#include "histProfiler/histogram.h"
+#include "histProfiler/utils.h"
+
+#include <iostream>
+#include <fstream>
+#include <thread>
+
+#if 1
+
+void readFile(std::ifstream& fstream)
+{
+using namespace profiler;
+
+	size_t numBuckets{0};
+	uint64_t magic{0};
+	fstream.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+	fstream.seekg(0, fstream.beg);
+
+	if (magic == profiler::shmRateHeader::magic())
+	{
+		profiler::shmRateHeader header;
+		fstream.read(reinterpret_cast<char*>(&header), sizeof(header));
+		numBuckets = header._numBuckets;
+		std::cout << header << std::endl;	
+	}
+	else if (magic == profiler::shmHistHeader::magic())
+	{
+		profiler::shmHistHeader header;
+		fstream.read(reinterpret_cast<char*>(&header), sizeof(header));
+		numBuckets = header._numBuckets;
+		std::cout << header << std::endl;
+	}
+	else
+	{
+		profiler::Throw(std::runtime_error) << "unexpected magic: " << std::hex << magic << End;
+	}
+
+	fstream.seekg(4096, fstream.beg);
+	for (size_t i = 0 ; i < numBuckets ; ++i)
+	{
+		uint64_t bucket{0};
+		fstream.read(reinterpret_cast<char*>(&bucket), sizeof(bucket));
+		std::cout << bucket << std::endl;
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	if (argc < 2)
+	{
+		std::cout << "provide file name" << std::endl;
+		return 1;
+	}
+	const char* fileName{argv[1]};
+	std::ifstream fstream{fileName, std::ios::out | std::ios::binary};
+
+	if (argc > 2)
+	{
+		while (true)
+		{
+			fstream.seekg(0, fstream.beg);
+			readFile(fstream);
+			std::this_thread::sleep_for(std::chrono::seconds{1});
+		}
+	}
+	else
+	{
+		readFile(fstream);
+	}
+	
+	return 0;
+}
+#else
+
 #include <iostream>
 #include <random>
 #include <cmath>
@@ -244,6 +319,7 @@ void testSeconds()
 	else
 		HistProfiler_DumpData(ctx, std::cout, profiler::outFormat::follow);
 }
+#endif
 
 #if 0
 void testMillis()
