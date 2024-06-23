@@ -124,7 +124,7 @@ class HistVisualiser:
 
         ax.grid(True)
         ax.set_xlabel(self.timeUnits)
-        ax.xaxis.set_label_coords(1.05, 0)
+        ax.xaxis.set_label_coords(0.96, 0.01)
         ax.set_ylabel("#samples")
         
         #ax.legend(loc='upper right')
@@ -137,18 +137,24 @@ class HistVisualiserLayout():
         self.histVisualisers = histVisualisers
         self.figure, self.axis = plt.subplots(len(self.histVisualisers), 1, figsize=figsize)
         self.figsize = figsize
-        #self.figure.tight_layout()
+        self.figure.tight_layout()
 
-        for histVis, ax in zip(self.histVisualisers, self.axis):
-            histVis.setup(ax, self.figure)
+        if len(self.histVisualisers) == 1:
+            self.histVisualisers[0].setup(self.axis, self.figure)
+        else:
+            for histVis, ax in zip(self.histVisualisers, self.axis):
+                histVis.setup(ax, self.figure)
 
         plt.show()
         
     def display(self):
         #clear_output(wait=True)
 
-        for histVis, ax in zip(self.histVisualisers, self.axis):
-            histVis.plot(ax, self.figure)
+        if len(self.histVisualisers) == 1:
+            self.histVisualisers[0].plot(self.axis, self.figure)
+        else:
+            for histVis, ax in zip(self.histVisualisers, self.axis):
+                histVis.plot(ax, self.figure)
 
         # drawing updated values
         self.figure.canvas.draw()
@@ -166,8 +172,11 @@ if __name__ == "__main__":
         HistVisualiser(r"C:\work\profiler2\linuxBUild\shmFile_basicThreads_2.shm", color='red'),
         HistVisualiser(r"C:\work\profiler2\linuxBUild\shmFile_basicThreads_3.shm", color='blue'),
         HistVisualiser(r"C:\work\profiler2\linuxBUild\shmFile_basicThreads_4.shm", color='red'),
+        HistVisualiser(r'C:\work\profiler2\linuxBUild\shmFile_threadComm_1.shm', color='green'),
        # HistVisualiser(r"C:\work\profiler2\linuxBUild\shmFile_basicThreads_2.shm", color='green')
     ]
+    hists = [HistVisualiser(r'C:\work\profiler2\linuxBUild\shmFile_histNum_1.shm')]
+
     plt.ion()
     histVis = HistVisualiserLayout(hists)
     while True:

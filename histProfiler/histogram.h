@@ -12,10 +12,85 @@ namespace profiler
 
 struct shmHistHeader
 {
-	static constexpr uint64_t magic() { return 0x0BADBABE1CEC0FFE; }
+	static constexpr uint64_t magic() { return 0x0BADBABE00000001; }
 public:
 	shmHistHeader() = default;
-	shmHistHeader(size_t samplesPerBucket, size_t numBuckets, const std::string& desc)
+	shmHistHeader(size_t numBuckets, const std::string& desc)
+	: _magic{magic()}, _numBuckets{numBuckets}
+	{
+		strncpy(_description, desc.c_str(), sizeof(_description) - 1);
+	}
+	void clear()
+	{
+		_magic = _numBuckets = _maxSample = _minSample = _overfows = _sum = _numSamples = 0;
+	}
+	uint64_t _magic{0};
+	uint64_t _numBuckets{0};
+	uint64_t _maxSample{ 0 };
+	uint64_t _minSample{ std::numeric_limits<uint64_t>::max() };
+	uint64_t _overfows{ 0 };
+	uint64_t _sum{ 0 };
+	uint64_t _numSamples{ 0 };
+	char _description[128] = {'\0'};
+	
+};
+
+std::ostream& operator<<(std::ostream& stream, const shmHistHeader& obj)
+{
+	auto mean{obj._numSamples > 0 ? obj._sum / obj._numSamples : 0};
+	stream << obj._description
+		<< " : _numBuckets: " << obj._numBuckets
+		<< ", _maxSample: " << obj._maxSample << ", _minSample: " << obj._minSample
+        << ", _overfows: " << obj._overfows << ", mean: " << mean << ", _numSamples: " << obj._numSamples;
+	return stream;
+}
+
+struct histogram
+{
+	histogram(uint64_t numBuckets,
+			const std::string& id, size_t cnt_, const std::string& desc)
+	: _shmHist{"shmFile_" + id + "_" + std::to_string(cnt_) + ".shm", 
+		  		shmHistHeader{numBuckets, desc},
+				numBuckets}
+	{}
+
+	void sample(uint64_t sample)
+	{
+		auto& header{_shmHist.header()};
+		auto* data{_shmHist.data()};
+
+		if (sample > header._maxSample)
+			header._maxSample = sample;
+		if (sample < header._minSample)
+			header._minSample = sample;
+		
+		if (sample < header._numBuckets - 1)
+		{
+			++data[sample];
+		}
+		else
+		{
+			++header._overfows;
+			++data[header._numBuckets - 1];
+		}
+
+		header._sum += sample;
+		++header._numSamples;
+
+		_shmHist.sync();
+	}
+
+	shmFile<shmHistHeader, uint64_t> _shmHist;
+};
+
+
+
+struct shmTimeHistHeader
+{
+	static constexpr uint64_t magic() { return 0x0BADBABE00000002; }
+public:
+	shmTimeHistHeader() = default;
+	shmTimeHistHeader(size_t samplesPerBucket, size_t numBuckets, const std::string& desc)
 	: _magic{magic()}, _samplesPerBucket{samplesPerBucket}, _numBuckets{numBuckets}
 	{
 		strncpy(_description, desc.c_str(), sizeof(_description) - 1);
@@ -36,7 +111,7 @@ public:
 	
 };
 
-std::ostream& operator<<(std::ostream& stream, const shmHistHeader& obj)
+std::ostream& operator<<(std::ostream& stream, const shmTimeHistHeader& obj)
 {
 	auto mean{obj._numSamples > 0 ? obj._sum / obj._numSamples : 0};
 	stream << obj._description
@@ -46,13 +121,13 @@ std::ostream& operator<<(std::ostream& stream, const shmHistHeader& obj)
 	return stream;
 }
 
-struct histogram
+struct timeHistogram
 {
 	// std::to_string(gettid())
-	histogram(uint64_t numSamplesPerBucket, uint64_t numBuckets,
+	timeHistogram(uint64_t numSamplesPerBucket, uint64_t numBuckets,
 			const std::string& id, size_t cnt_, const std::string& desc)
 	: _shmHist{"shmFile_" + id + "_" + std::to_string(cnt_) + ".shm", 
-		  		shmHistHeader{numSamplesPerBucket, numBuckets, desc},
+		  		shmTimeHistHeader{numSamplesPerBucket, numBuckets, desc},
 				numBuckets}
 	{}
 
@@ -65,7 +140,12 @@ struct histogram
 		const auto end{std::chrono::system_clock::now()};
 		const auto diffNanos{std::chrono::duration_cast<std::chrono::nanoseconds>(end - _begin)};
 		sample(diffNanos.count());
+	}
 
+	void sample(std::chrono::time_point<std::chrono::system_clock> begin, std::chrono::time_point<std::chrono::system_clock> end)
+	{
+		const auto diffNanos{std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin)};
+		sample(diffNanos.count());
 	}
 
 	void sample(uint64_t sample)
@@ -96,12 +176,13 @@ struct histogram
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> _begin;
-	shmFile<shmHistHeader, uint64_t> _shmHist;
+	shmFile<shmTimeHistHeader, uint64_t> _shmHist;
 };
+
 
 struct shmRateHeader
 {
-	static constexpr uint64_t magic() { return 0x0BADBABEBADC0FFE; }
+	static constexpr uint64_t magic() { return 0x0BADBABE00000003; }
 public:
 	shmRateHeader() = default;
 	shmRateHeader(size_t nanosPerBucket, size_t numBuckets, const std::string& desc)

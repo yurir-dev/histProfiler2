@@ -6,7 +6,11 @@
 #include <string.h>
 #include <chrono>
 #include <vector>
+#include <queue>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include <iostream>
 
 void wasteTime(size_t cnt)
@@ -21,7 +25,7 @@ void wasteTime(size_t cnt)
 
 int testMacros()
 {
-	ThreadLocalHist(basic, 1000, 500, "basic test of macros");
+	ThreadLocalTimeHist(basic, 1000, 500, "basic test of macros");
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -31,10 +35,80 @@ int testMacros()
 	{
 		size_t timeToWaist = static_cast<size_t>(std::round(dist(gen)));
 	
-		BeginProfiler(basic);
+		TimeHistBegin(basic);
 		wasteTime(timeToWaist);
-		EndProfiler(basic);
+		TimeHistEnd(basic);
 		std::this_thread::sleep_for(std::chrono::milliseconds{10});
+	}
+
+	return 0;
+}
+
+int testThreadComm()
+{
+	struct Node
+	{
+		int _id;
+		std::chrono::time_point<std::chrono::system_clock> _sentTP;
+	};
+	std::queue<Node> queue;
+	std::mutex mtx;
+	std::condition_variable cv;
+
+	std::atomic<bool> end{false};
+
+	auto producer{[&queue, &mtx, &cv, &end](){
+		int cnt{0};
+		while(!end.load(std::memory_order_acquire))
+		{
+			{
+				std::unique_lock<std::mutex> l{mtx};
+				queue.push(Node{cnt++, std::chrono::system_clock::now()});
+			}
+			cv.notify_all();
+			std::this_thread::sleep_for(std::chrono::milliseconds{1});
+		}
+
+		std::cout << "send: " << cnt << " nodes" << std::endl;
+	}};
+
+	auto consumer{[&queue, &mtx, &cv, &end](){
+		ThreadLocalTimeHist(threadComm, 1000, 300, "passing messages between threads");	
+		
+		int cnt{0};
+		while(!end.load(std::memory_order_acquire))
+		{
+			std::unique_lock<std::mutex> l(mtx);
+			cv.wait(l, [&end, &queue]{ return end.load(std::memory_order_acquire) || !queue.empty(); });
+			
+			if (!queue.empty())
+			{
+				auto& node{queue.front()};
+				TimeHistSample(threadComm, node._sentTP, std::chrono::system_clock::now());
+				queue.pop();
+				cnt++;
+			}
+		}
+
+		std::cout << "recv: " << cnt << " nodes, queue.size: " << queue.size() << std::endl;
+	}};
+
+	std::vector<std::thread> threads;
+	threads.emplace_back(consumer);
+	threads.emplace_back(producer);
+
+	std::this_thread::sleep_for(std::chrono::seconds{60});
+
+	end.store(true, std::memory_order_acquire);
+	{
+		std::unique_lock<std::mutex> l{mtx};
+		queue.push(Node{0, std::chrono::system_clock::now()}); // release the consumer
+	}
+	cv.notify_all();
+
+	for(auto& t : threads)
+	{
+		t.join();
 	}
 
 	return 0;
@@ -46,18 +120,18 @@ int testMacrosMiltipleThreads()
 	auto func{[](double stdev){
 		std::random_device rd{};
 		std::mt19937 gen{ rd() };
-		std::normal_distribution<> dist{ 2000, 100 * stdev };
+		std::normal_distribution<> dist{ 2000 + (stdev * 200), 100 * stdev };
 
 		for (size_t i = 0; i < 1024 * 1024; i++)
 		{
 			size_t timeToWaist = static_cast<size_t>(std::round(dist(gen)));
 
-			ThreadLocalHist(basicThreads, 1000, 500, "basic test of macros with threads");
+			ThreadLocalTimeHist(basicThreads, 1000, 200, "basic test of macros with threads");
 
-			BeginProfiler(basicThreads);
+			TimeHistBegin(basicThreads);
 			wasteTime(timeToWaist);
-			EndProfiler(basicThreads);
-			std::this_thread::sleep_for(std::chrono::milliseconds{10});
+			TimeHistEnd(basicThreads);
+			//std::this_thread::sleep_for(std::chrono::milliseconds{1});
 		}
 	}};
 	
@@ -91,11 +165,36 @@ void testRateCnt()
 	}
 }
 
+void testHistAsNumbers()
+{
+	ThreadLocalTimeHist(histNum, 1, 100, "test hist with numbers");
+
+	std::random_device rd{};
+	std::mt19937 gen{ rd() };
+	std::normal_distribution<double> dist{ 40, 10 };
+
+	for (size_t i = 0; i < 1024 * 1024; i++)
+	{
+		SampleHist(histNum, std::round(dist(gen)));
+	}
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
+	std::vector<std::thread> threads;
 	//testRateCnt();
 	//testMacros();
-	testMacrosMiltipleThreads();
+	
+	threads.emplace_back(testMacros);
+	threads.emplace_back(testThreadComm);
+	threads.emplace_back(testHistAsNumbers);
+	threads.emplace_back(testRateCnt);
+	
+	for(auto& t : threads)
+	{
+		if(t.joinable())
+			t.join();
+	}
 
 	return 0;
 }
