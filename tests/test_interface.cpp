@@ -99,7 +99,7 @@ int testThreadComm()
 
 	std::this_thread::sleep_for(std::chrono::seconds{60});
 
-	end.store(true, std::memory_order_acquire);
+	end.store(true, std::memory_order_release);
 	{
 		std::unique_lock<std::mutex> l{mtx};
 		queue.push(Node{0, std::chrono::system_clock::now()}); // release the consumer

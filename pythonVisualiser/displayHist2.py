@@ -7,7 +7,7 @@ import time
 import pdb
 import struct
 from datetime import datetime
-from matplotlib.animation import FuncAnimation
+#from matplotlib.animation import FuncAnimation
 
 def nanosToTimeUnits(nanos):
     timeUnits = f"{nanos} nanos per bucket"

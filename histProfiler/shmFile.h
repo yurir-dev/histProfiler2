@@ -92,7 +92,7 @@ shmFile<HeaderType, DataType>::shmFile(std::filesystem::path filename, HeaderTyp
     const auto totalSize{headerSizeBytes + dataSizeBytes};
 
 	::lseek(raii._fd, totalSize - 1, SEEK_SET);
-	::write(raii._fd, "0", 1);
+	[[maybe_unused]]auto res{::write(raii._fd, "0", 1)};
 
 	auto* beginAddr{mmap(nullptr, totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, raii._fd, 0)};
 	if (beginAddr == reinterpret_cast<void*>(-1))
