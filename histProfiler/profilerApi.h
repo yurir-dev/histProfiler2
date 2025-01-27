@@ -2,11 +2,6 @@
 
 /*
 
-TODO
-
-1) global hist, begin() in one thread end() in another
-2) create just hist , ThreadLocalTimeHist(id, perBucket=1, 100, desc)
-
 */
 
 
@@ -16,22 +11,35 @@ TODO
 
 #define var(x) x##_cnt
 
+
 /*
-ThreadLocalTimeHist(histNum, 1, 100, "test hist with numbers");
-std::random_device rd{};
-std::mt19937 gen{ rd() };
-std::normal_distribution<double> dist{ 40, 10 };
-for (size_t i = 0; i < 1024 * 1024; i++)
-{
+	simple histogram
+
+	ThreadLocalHist(histNum, - shmFile_histNum.shm
+					100, - number of buckets
+					"$", - X axis description
+					"test hist with numbers");
+	
 	SampleHist(histNum, std::round(dist(gen)));
-}
 */
-#define ThreadLocalHist(id, num, description) \
+#define ThreadLocalHist(id, num, XAxisDesc, description) \
 	static size_t var(id);	\
-	static thread_local profiler::histogram id{num, #id, ++var(id), description};
+	static thread_local profiler::histogram id{num, #id, ++var(id), XAxisDesc, description};
 
 #define SampleHist(id, num) do { id.sample(num); } while(false)
 
+/*
+	used to measure code execution in specified time units,
+
+ThreadLocalTimeHist(basic, - shmFile_basic.shm 
+					1000, - 1000 nanos per bucket - microseconds
+					500, - number of buckets  
+					"basic test of macros");
+
+TimeHistBegin(basic);
+...
+TimeHistEnd(basic);
+*/
 #define ThreadLocalTimeHist(id, perBucket, num, description) \
 	static size_t var(id);	\
 	static thread_local profiler::timeHistogram id{perBucket, num, #id, ++var(id), description};
@@ -40,6 +48,16 @@ for (size_t i = 0; i < 1024 * 1024; i++)
 #define TimeHistEnd(id) do { id.end(); } while(false)
 #define TimeHistSample(id, beginTP, endTP) do { id.sample(beginTP, endTP); } while(false)
 
+/*
+	used to measure rate per  specified time units - second or less than a second
+
+	ThreadLocalRateCnt (rateEvents,
+						1'000'000'000 - events / second, 
+						100, - size of the array of last rates to keep
+						"basic test of rate counter");
+	
+	RateCntSample(rateEvents, 1);
+*/
 #define ThreadLocalRateCnt(id, perBucket, num, description) \
 	static size_t var(id);	\
 	static thread_local profiler::rateCounter id{perBucket, num, #id, ++var(id), description};

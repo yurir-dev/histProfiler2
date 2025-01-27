@@ -66,7 +66,7 @@ int testThreadComm()
 				queue.push(Node{cnt++, std::chrono::system_clock::now()});
 			}
 			cv.notify_all();
-			std::this_thread::sleep_for(std::chrono::milliseconds{1});
+			std::this_thread::sleep_for(std::chrono::microseconds{1});
 		}
 
 		std::cout << "send: " << cnt << " nodes" << std::endl;
@@ -167,7 +167,7 @@ void testRateCnt()
 
 void testHistAsNumbers()
 {
-	ThreadLocalTimeHist(histNum, 1, 100, "test hist with numbers");
+	ThreadLocalHist(histNum, 100, "$", "test hist with numbers");
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };
@@ -176,6 +176,19 @@ void testHistAsNumbers()
 	for (size_t i = 0; i < 1024 * 1024; i++)
 	{
 		SampleHist(histNum, std::round(dist(gen)));
+	}
+}
+
+void testSleep()
+{
+	ThreadLocalTimeHist(testStdSleep, 1000, 100, "test std::this_thread::sleep_for(std::chrono::microseconds{1})");
+
+	int repeat{1024 * 1024 * 1024};
+	while(repeat-- > 0)
+	{
+		TimeHistBegin(testStdSleep);
+		std::this_thread::sleep_for(std::chrono::microseconds{1});
+		TimeHistEnd(testStdSleep);
 	}
 }
 
@@ -188,6 +201,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	threads.emplace_back(testMacros);
 	threads.emplace_back(testThreadComm);
 	threads.emplace_back(testHistAsNumbers);
+	threads.emplace_back(testSleep);
 	threads.emplace_back(testRateCnt);
 	
 	for(auto& t : threads)

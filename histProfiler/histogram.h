@@ -15,14 +15,17 @@ struct shmHistHeader
 	static constexpr uint64_t magic() { return 0x0BADBABE00000001; }
 public:
 	shmHistHeader() = default;
-	shmHistHeader(size_t numBuckets, const std::string& desc)
+	shmHistHeader(size_t numBuckets, const std::string& aAxisDesc = "", const std::string& desc = "")
 	: _magic{magic()}, _numBuckets{numBuckets}
 	{
 		strncpy(_description, desc.c_str(), sizeof(_description) - 1);
+		strncpy(_XAxisDescription, aAxisDesc.c_str(), sizeof(_XAxisDescription) - 1);
 	}
 	void clear()
 	{
 		_magic = _numBuckets = _maxSample = _minSample = _overfows = _sum = _numSamples = 0;
+		_description[0] = '\0';
+		_XAxisDescription[0] = '\0';
 	}
 	uint64_t _magic{0};
 	uint64_t _numBuckets{0};
@@ -32,7 +35,7 @@ public:
 	uint64_t _sum{ 0 };
 	uint64_t _numSamples{ 0 };
 	char _description[128] = {'\0'};
-	
+	char _XAxisDescription[128] = {'\0'};
 };
 
 std::ostream& operator<<(std::ostream& stream, const shmHistHeader& obj)
@@ -47,10 +50,10 @@ std::ostream& operator<<(std::ostream& stream, const shmHistHeader& obj)
 
 struct histogram
 {
-	histogram(uint64_t numBuckets,
-			const std::string& id, size_t cnt_, const std::string& desc)
+	histogram(uint64_t numBuckets, const std::string& id, size_t cnt_, 
+			  const std::string& xAxisDesc, const std::string& desc)
 	: _shmHist{"shmFile_" + id + "_" + std::to_string(cnt_) + ".shm", 
-		  		shmHistHeader{numBuckets, desc},
+		  		shmHistHeader{numBuckets, xAxisDesc, desc},
 				numBuckets}
 	{}
 
@@ -82,7 +85,6 @@ struct histogram
 
 	shmFile<shmHistHeader, uint64_t> _shmHist;
 };
-
 
 
 struct shmTimeHistHeader
@@ -120,6 +122,7 @@ std::ostream& operator<<(std::ostream& stream, const shmTimeHistHeader& obj)
         << ", _overfows: " << obj._overfows << ", mean: " << mean << ", _numSamples: " << obj._numSamples;
 	return stream;
 }
+
 
 struct timeHistogram
 {
@@ -222,7 +225,13 @@ struct rateCounter
 		const auto nanos{std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()};
 		const auto index{static_cast<size_t>((nanos / header._nanosPerBucket) % header._numBuckets)};
 		data[index] += num;
-		header._currentIndex = index;
+
+		if (header._currentIndex != index)
+		{
+			const auto nextIndexIndex{(index + 1) % header._numBuckets};
+			data[nextIndexIndex] = 0;
+			header._currentIndex = index;
+		}
 	}
 
 	shmFile<shmRateHeader, uint64_t> _shmRate;
